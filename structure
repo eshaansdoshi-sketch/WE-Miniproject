@@ -1,0 +1,37 @@
+/
+├── README.md               # Project documentation
+├── backend/                # FastAPI Backend
+│   ├── main.py             # Entry point (Routes & Logic)
+│   ├── requirements.txt    # Python dependencies
+│   ├── .env                # API Keys & DB Config
+│   ├── sql/                # Supabase Database Schema
+│   │   ├── job_roles.sql
+│   │   ├── user_roles.sql
+│   │   └── test_submissions.sql
+│   └── services/           # AI & Business Logic Modules
+│       ├── ai_resume_analyzer.py
+│       ├── qualification_engine.py
+│       ├── test_generator.py
+│       ├── test_scorer.py
+│       ├── feedback_generator.py
+│       └── ...
+│
+├── frontend/               # Vite + React Frontend
+│   ├── package.json        # Frontend dependencies
+│   ├── .env                # React environment variables
+│   ├── src/
+│   │   ├── main.jsx        # Root entry
+│   │   ├── App.jsx         # Routing & Navigation
+│   │   ├── api.js          # Backend API services
+│   │   ├── AuthContext.jsx # Authentication provider
+│   │   ├── UserContext.jsx # User state & workflow
+│   │   ├── supabaseClient.js
+│   │   └── pages/          # Application Pages
+│   │       ├── AdminDashboard.jsx  # HR/Admin controls
+│   │       ├── Apply.jsx           # Role selection
+│   │       ├── ResumeUpload.jsx    # Applicant upload
+│   │       ├── Screening.jsx       # Real-time evaluation
+│   │       ├── TestPage.jsx        # Role-based MCQ tests
+│   │       ├── Login.jsx           # Supabase Login
+│   │       └── Register.jsx        # Supabase Signup
+└── ...
