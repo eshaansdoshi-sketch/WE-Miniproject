@@ -1,0 +1,19 @@
+# FastAPI and server
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# Environment configuration
+python-dotenv>=1.0.0
+
+# Supabase client
+supabase>=2.3.0
+
+# OpenAI-compatible API client
+openai>=1.10.0
+
+# HTTP client for async requests
+httpx>=0.26.0
+
+# PDF parsing
+PyPDF2>=3.0.0
