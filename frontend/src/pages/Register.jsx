@@ -34,20 +34,35 @@ function Register() {
             const data = await signUp(email, password)
 
             if (data.user) {
-                // Check if any admin exists
-                const { data: adminCheck } = await supabase
+                // Check if any admin already exists in the system
+                const { data: adminCheck, error: checkError } = await supabase
                     .from('user_roles')
-                    .select('id')
+                    .select('user_id')
                     .eq('role', 'admin')
-                    .limit(1)
+                    .maybeSingle()
 
-                // First user becomes admin, others become applicant
-                const assignedRole = (!adminCheck || adminCheck.length === 0) ? 'admin' : 'applicant'
+                if (checkError) {
+                    console.error('Admin check error:', checkError)
+                }
 
-                await supabase.from('user_roles').insert({
+                // If no admin exists, the first user to register becomes the admin
+                // Subsequent users are default to 'applicant'
+                const assignedRole = adminCheck ? 'applicant' : 'admin'
+
+                const { error: insertError } = await supabase.from('user_roles').insert({
                     user_id: data.user.id,
                     role: assignedRole,
                 })
+
+                // If we tried to become admin but someone else beat us to it (unique constraint)
+                // Fallback to applicant role
+                if (insertError && assignedRole === 'admin') {
+                    console.log('Admin slot taken, falling back to applicant')
+                    await supabase.from('user_roles').insert({
+                        user_id: data.user.id,
+                        role: 'applicant',
+                    })
+                }
             }
 
             setSuccess(true)

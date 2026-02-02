@@ -6,9 +6,10 @@ import uuid
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from datetime import datetime, timedelta, timezone
 
 from services.supabase_client import (
     supabase_select, 
@@ -16,6 +17,7 @@ from services.supabase_client import (
     supabase_insert, 
     supabase_update_by_id,
     supabase_select_where_in,
+    supabase_select_where,
 )
 from services.qualification_engine import evaluate_candidate_for_role
 from services.candidate_repository import save_candidate, save_evaluation
@@ -55,14 +57,14 @@ async def lifespan(app: FastAPI):
     
     missing_vars = [name for name, value in required_vars.items() if not value]
     if missing_vars:
-        print(f"⚠️  Warning: Missing environment variables: {', '.join(missing_vars)}")
+        print(f"[WARNING] Missing environment variables: {', '.join(missing_vars)}")
     else:
-        print("✅ All environment variables loaded successfully")
+        print("[OK] All environment variables loaded successfully")
     
     yield
     
     # Shutdown: Cleanup resources if needed
-    print("🛑 Application shutting down...")
+    print("[INFO] Application shutting down...")
 
 
 # Initialize FastAPI app
@@ -140,6 +142,12 @@ class TestAnswer(BaseModel):
 class TestSubmission(BaseModel):
     test_id: str
     answers: list[TestAnswer]
+
+
+class CandidateStatusUpdate(BaseModel):
+    """Request body for updating candidate status by admin."""
+    status: str  # applied, qualified, rejected, approved, interview, hired
+    notes: str | None = None
 
 
 @app.post("/job-role", tags=["Job Roles"])
@@ -298,6 +306,183 @@ async def get_all_evaluations():
         "success": True,
         "count": len(data) if isinstance(data, list) else 0,
         "evaluations": data,
+    }
+
+
+# =============================================================================
+# CANDIDATE LOOKUP BY USER
+# =============================================================================
+
+
+@app.get("/candidate/by-user/{user_id}", tags=["Candidate"])
+async def get_candidate_by_user(user_id: str):
+    """
+    Fetch candidate record for an authenticated user.
+    Used to restore application state after login.
+    
+    Returns the candidate record if exists, None if new applicant.
+    """
+    print(f"[GetCandidateByUser] Looking up candidate for user_id={user_id}")
+    
+    try:
+        records = await supabase_select_where("candidates", {"user_id": user_id})
+        
+        if isinstance(records, dict) and records.get("error"):
+            print(f"[GetCandidateByUser] Error: {records}")
+            return None
+        
+        if isinstance(records, list) and len(records) > 0:
+            candidate = records[0]
+            print(f"[GetCandidateByUser] Found candidate_id={candidate.get('id')}, status={candidate.get('status')}")
+            return candidate
+        
+        print(f"[GetCandidateByUser] No candidate found for user_id={user_id}")
+        return None
+        
+    except Exception as e:
+        print(f"[GetCandidateByUser] Exception: {e}")
+        return None
+
+
+# =============================================================================
+# ADMIN CANDIDATE MANAGEMENT ROUTES
+# =============================================================================
+
+
+@app.get("/admin/candidate/{candidate_id}", tags=["Admin"])
+async def get_admin_candidate_details(candidate_id: str):
+    """
+    Get full candidate details for admin review.
+    
+    Returns:
+        - Candidate basic info (email, experience level)
+        - Applied role details
+        - Resume extracted skills
+        - AI resume summary
+        - Test results (per skill + total score)
+        - Current candidate status
+        - Admin notes
+    """
+    # Fetch candidate
+    candidate = await supabase_select_by_id("candidates", candidate_id)
+    
+    if candidate is None:
+        raise HTTPException(status_code=404, detail=f"Candidate {candidate_id} not found")
+    
+    if isinstance(candidate, dict) and candidate.get("error"):
+        raise HTTPException(status_code=500, detail="Failed to fetch candidate")
+    
+    # Fetch applied role details if role_id exists
+    role_details = None
+    if candidate.get("role_id"):
+        role = await supabase_select_by_id("job_roles", candidate.get("role_id"))
+        if role and not (isinstance(role, dict) and role.get("error")):
+            role_details = {
+                "role_id": role.get("id"),
+                "role_name": role.get("role_name"),
+                "required_skills": role.get("required_skills", []),
+                "min_experience_level": role.get("min_experience_level"),
+            }
+    
+    # Fetch test attempts and scores
+    test_results = []
+    total_score = None
+    test_attempts = await supabase_select_where("test_attempts", {"candidate_id": candidate_id})
+    
+    if isinstance(test_attempts, list) and test_attempts:
+        scores = []
+        for attempt in test_attempts:
+            test_results.append({
+                "test_id": attempt.get("test_id"),
+                "score": attempt.get("score"),
+                "total_questions": attempt.get("total_questions"),
+                "submitted_at": attempt.get("created_at"),
+            })
+            if attempt.get("score") is not None:
+                scores.append(attempt.get("score"))
+        
+        if scores:
+            total_score = round(sum(scores) / len(scores))
+    
+    # Fetch evaluation result if exists
+    evaluation = None
+    evaluations = await supabase_select_where("evaluations", {"candidate_id": candidate_id})
+    if isinstance(evaluations, list) and evaluations:
+        eval_data = evaluations[0]  # Get most recent
+        evaluation = {
+            "qualified": eval_data.get("qualified"),
+            "matched_skills": eval_data.get("matched_skills", []),
+            "missing_skills": eval_data.get("missing_skills", []),
+            "feedback": eval_data.get("feedback"),
+        }
+    
+    return {
+        "success": True,
+        "candidate": {
+            "id": candidate.get("id"),
+            "email": candidate.get("email"),
+            "experience_level": candidate.get("experience_level"),
+            "experience_summary": candidate.get("experience_summary"),
+            "skills": candidate.get("skills", []),
+            "resume_score": candidate.get("resume_score"),
+            "resume_file_path": candidate.get("resume_file_path"),
+            "status": candidate.get("status", "applied"),
+            "admin_notes": candidate.get("admin_notes"),
+            "applied_at": candidate.get("applied_at"),
+        },
+        "role": role_details,
+        "test_results": test_results,
+        "total_test_score": total_score,
+        "evaluation": evaluation,
+    }
+
+
+@app.patch("/admin/candidate-status/{candidate_id}", tags=["Admin"])
+async def update_candidate_status(candidate_id: str, update: CandidateStatusUpdate):
+    """
+    Update candidate status and admin notes.
+    
+    Allowed status values:
+        - applied
+        - qualified
+        - rejected
+        - approved
+        - interview
+        - hired
+    """
+    # Validate status value
+    allowed_statuses = ["applied", "qualified", "rejected", "approved", "interview", "hired"]
+    if update.status not in allowed_statuses:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid status. Must be one of: {', '.join(allowed_statuses)}"
+        )
+    
+    # Verify candidate exists
+    candidate = await supabase_select_by_id("candidates", candidate_id)
+    if candidate is None:
+        raise HTTPException(status_code=404, detail=f"Candidate {candidate_id} not found")
+    
+    if isinstance(candidate, dict) and candidate.get("error"):
+        raise HTTPException(status_code=500, detail="Failed to fetch candidate")
+    
+    # Build update data
+    update_data = {"status": update.status}
+    if update.notes is not None:
+        update_data["admin_notes"] = update.notes
+    
+    # Update candidate
+    result = await supabase_update_by_id("candidates", candidate_id, update_data)
+    
+    if isinstance(result, dict) and result.get("error"):
+        raise HTTPException(status_code=500, detail="Failed to update candidate status")
+    
+    return {
+        "success": True,
+        "candidate_id": candidate_id,
+        "status": update.status,
+        "admin_notes": update.notes,
+        "message": f"Candidate status updated to '{update.status}'",
     }
 
 
@@ -662,6 +847,30 @@ async def get_candidate_tests(candidate_id: str, role_id: str):
     Get MCQ questions for all tests assigned to a candidate based on job role's required_skills.
     Returns questions without correct answers for security.
     """
+    # Step 0: Check if candidate has already completed assessments
+    candidate = await supabase_select_by_id("candidates", candidate_id)
+    
+    if candidate is None:
+        return {
+            "success": False,
+            "error": f"Candidate with id {candidate_id} not found",
+        }
+    
+    if isinstance(candidate, dict) and candidate.get("error"):
+        return {
+            "success": False,
+            "error": candidate,
+        }
+    
+    candidate_status = candidate.get("status", "applied")
+    if candidate_status == "completed":
+        print(f"[candidate-tests] Blocking - candidate already completed: {candidate_id}")
+        return {
+            "success": False,
+            "error": "Assessments already completed. You cannot retake tests.",
+            "status": candidate_status,
+        }
+    
     # Fetch job role to get required_skills
     job_role = await supabase_select_by_id("job_roles", role_id)
     
@@ -846,7 +1055,7 @@ async def submit_test(candidate_id: str, submission: TestSubmission):
         interview_readiness = resume_score
     
     # Update status based on interview readiness
-    new_status = "Shortlisted" if interview_readiness >= 75 else "Tested"
+    new_status = "completed"  # One-time assessment, no retakes allowed
     await supabase_update_by_id("candidates", candidate_id, {"status": new_status})
     
     return {
@@ -927,62 +1136,280 @@ async def evaluate_candidate(role_id: str, candidate_data: CandidateEvalRequest)
 
 
 @app.post("/process-resume", tags=["Workflow"])
-async def process_resume(file: UploadFile = File(...)):
+async def process_resume(
+    file: UploadFile = File(...),
+    user_id: str = Form(...),
+    role_id: str = Form(...),
+    email: str = Form(None),
+):
     """
     High-level workflow endpoint to process a resume in one call.
     
-    Orchestrates: upload → extract → AI analyze → score → save candidate
-    
-    Returns only the candidate_id for subsequent operations.
+    Orchestrates: duplicate check → upload → extract → AI analyze → score → save candidate
     """
-    # Step 1: Read file bytes
-    file_bytes = await file.read()
-
-    # Step 2: Extract text from PDF
-    resume_text = extract_text_from_pdf(file_bytes)
-
-    # Step 3: Analyze with AI
-    ai_data = await analyze_resume_with_ai(resume_text)
+    print("=" * 60)
+    print("[PROCESS-RESUME] Upload started")
+    print(f"[PROCESS-RESUME] File name: {file.filename}")
+    print(f"[PROCESS-RESUME] Content type: {file.content_type}")
+    print(f"[PROCESS-RESUME] User ID: {user_id}")
+    print(f"[PROCESS-RESUME] Role ID: {role_id}")
+    print(f"[PROCESS-RESUME] Email: {email}")
+    print("=" * 60)
     
-    if isinstance(ai_data, dict) and ai_data.get("error"):
+    # Step 0.1: Validate UUID format for user_id and role_id
+    print("[STEP 0.1] Validating UUID format...")
+    try:
+        # Validate user_id is a valid UUID
+        uuid.UUID(str(user_id))
+        print(f"[STEP 0.1] user_id is valid UUID: {user_id}")
+    except (ValueError, AttributeError) as e:
+        print(f"[STEP 0.1] ERROR: Invalid user_id format: {user_id}")
         return {
             "success": False,
-            "error": "AI analysis failed",
-            "details": ai_data,
+            "error": f"Invalid user ID format. Expected UUID, got: {user_id}",
+        }
+    
+    try:
+        # Validate role_id is a valid UUID
+        uuid.UUID(str(role_id))
+        print(f"[STEP 0.1] role_id is valid UUID: {role_id}")
+    except (ValueError, AttributeError) as e:
+        print(f"[STEP 0.1] ERROR: Invalid role_id format: {role_id}")
+        return {
+            "success": False,
+            "error": f"Invalid role ID format. Expected UUID, got: {role_id}",
+        }
+    
+    # Step 0.2: Verify role_id exists in job_roles table
+    print("[STEP 0.2] Verifying role exists in job_roles...")
+    try:
+        role_check = await supabase_select_by_id("job_roles", role_id)
+        print(f"[STEP 0.2] Role check result: {role_check}")
+        
+        if role_check is None:
+            print(f"[STEP 0.2] ERROR: Role ID not found in job_roles: {role_id}")
+            return {
+                "success": False,
+                "error": f"Selected role does not exist. Role ID: {role_id}",
+            }
+        
+        if isinstance(role_check, dict) and role_check.get("error"):
+            print(f"[STEP 0.2] ERROR: Failed to check role: {role_check}")
+            return {
+                "success": False,
+                "error": f"Failed to verify role: {role_check.get('error')}",
+            }
+        
+        print(f"[STEP 0.2] Role verified: {role_check.get('role_name', 'Unknown')}")
+    except Exception as e:
+        print(f"[STEP 0.2] EXCEPTION while checking role: {str(e)}")
+        return {
+            "success": False,
+            "error": f"Role verification failed: {str(e)}",
+        }
+    
+    # Step 0: Check application eligibility based on user's previous applications
+    print("[STEP 0] Checking application eligibility...")
+    
+    # Fetch ALL candidate records for this user (across all roles)
+    try:
+        all_user_applications = await supabase_select_where("candidates", {
+            "user_id": user_id,
+        })
+        print(f"[STEP 0] All user applications: {len(all_user_applications) if isinstance(all_user_applications, list) else 0}")
+    except Exception as e:
+        print(f"[STEP 0] ERROR fetching user applications: {str(e)}")
+        return {
+            "success": False,
+            "error": f"Application check failed: {str(e)}",
+        }
+    
+    # Check if user has any completed/approved/interview status (hiring process complete)
+    if isinstance(all_user_applications, list) and all_user_applications:
+        blocked_statuses = ["completed", "approved", "interview"]
+        for app in all_user_applications:
+            app_status = app.get("status", "applied")
+            if app_status in blocked_statuses:
+                print(f"[STEP 0] Blocking - user has completed hiring process with status: {app_status}")
+                return {
+                    "success": False,
+                    "error": "You have already completed the hiring process.",
+                    "existing_candidate_id": app.get("id"),
+                    "current_status": app_status,
+                }
+    
+    # Check if user has already applied for THIS specific role
+    try:
+        existing_role_application = await supabase_select_where("candidates", {
+            "user_id": user_id,
+            "role_id": role_id,
+        })
+        print(f"[STEP 0] Existing application for this role: {existing_role_application}")
+    except Exception as e:
+        print(f"[STEP 0] ERROR checking role application: {str(e)}")
+        return {
+            "success": False,
+            "error": f"Role application check failed: {str(e)}",
+        }
+    
+    if isinstance(existing_role_application, list) and existing_role_application:
+        for app in existing_role_application:
+            app_status = app.get("status", "applied")
+            
+            # Block if not rejected - already in progress or completed for this role
+            if app_status != "rejected":
+                print(f"[STEP 0] Blocking - already applied for this role with status: {app_status}")
+                return {
+                    "success": False,
+                    "error": "You have already applied for this role.",
+                    "existing_candidate_id": app.get("id"),
+                    "current_status": app_status,
+                }
+            
+            # If rejected for this role, block - can only apply to DIFFERENT roles
+            print(f"[STEP 0] Blocking - already rejected for this same role")
+            return {
+                "success": False,
+                "error": "You were previously rejected for this role. Please apply for a different role.",
+                "existing_candidate_id": app.get("id"),
+            }
+    
+    print("[STEP 0] Eligibility check passed - proceeding with new application...")
+    
+    # Step 1: Read file bytes
+    print("[STEP 1] Reading file bytes...")
+    try:
+        file_bytes = await file.read()
+        print(f"[STEP 1] File read successful, size: {len(file_bytes)} bytes")
+        
+        if len(file_bytes) == 0:
+            print("[STEP 1] ERROR: File is empty!")
+            return {
+                "success": False,
+                "error": "Uploaded file is empty or could not be read",
+            }
+    except Exception as e:
+        print(f"[STEP 1] ERROR reading file: {str(e)}")
+        return {
+            "success": False,
+            "error": f"Failed to read uploaded file: {str(e)}",
+        }
+
+    # Step 2: Extract text from PDF
+    print("[STEP 2] Extracting text from PDF...")
+    try:
+        resume_text = extract_text_from_pdf(file_bytes)
+        print(f"[STEP 2] Extracted text length: {len(resume_text) if resume_text else 0} chars")
+        print(f"[STEP 2] Text preview: {resume_text[:200] if resume_text else 'NONE'}...")
+        
+        if not resume_text or len(resume_text) < 10:
+            print("[STEP 2] ERROR: Resume text extraction failed or returned empty")
+            return {
+                "success": False,
+                "error": "Resume text extraction failed - could not read PDF content",
+            }
+    except Exception as e:
+        print(f"[STEP 2] ERROR extracting text: {str(e)}")
+        return {
+            "success": False,
+            "error": f"PDF text extraction failed: {str(e)}",
+        }
+
+    # Step 3: Analyze with AI
+    print("[STEP 3] Analyzing resume with AI...")
+    try:
+        ai_data = await analyze_resume_with_ai(resume_text)
+        print(f"[STEP 3] AI analysis result: {ai_data}")
+        
+        if isinstance(ai_data, dict) and ai_data.get("error"):
+            print(f"[STEP 3] ERROR: AI analysis failed - {ai_data}")
+            return {
+                "success": False,
+                "error": "AI analysis failed",
+                "details": ai_data,
+            }
+    except Exception as e:
+        print(f"[STEP 3] ERROR in AI analysis: {str(e)}")
+        return {
+            "success": False,
+            "error": f"AI analysis exception: {str(e)}",
         }
 
     # Step 4: Calculate resume score
-    score_data = calculate_resume_score(ai_data)
-
-    # Step 5: Generate unique filename and upload to storage
-    file_extension = file.filename.split(".")[-1] if file.filename else "pdf"
-    unique_filename = f"{uuid.uuid4()}.{file_extension}"
-    upload_result = await upload_resume(file_bytes, unique_filename)
-
-    if not isinstance(upload_result, str):
+    print("[STEP 4] Calculating resume score...")
+    try:
+        score_data = calculate_resume_score(ai_data)
+        print(f"[STEP 4] Score data: {score_data}")
+    except Exception as e:
+        print(f"[STEP 4] ERROR calculating score: {str(e)}")
         return {
             "success": False,
-            "error": "File upload failed",
-            "details": upload_result,
+            "error": f"Resume scoring failed: {str(e)}",
         }
 
-    # Step 6: Save candidate to database with status "Applied"
-    candidate_record = await save_candidate({
+    # Step 5: Generate unique filename and upload to storage
+    print("[STEP 5] Uploading file to storage...")
+    try:
+        file_extension = file.filename.split(".")[-1] if file.filename else "pdf"
+        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+        print(f"[STEP 5] Generated filename: {unique_filename}")
+        
+        upload_result = await upload_resume(file_bytes, unique_filename)
+        print(f"[STEP 5] Upload result: {upload_result}")
+
+        if not isinstance(upload_result, str):
+            print(f"[STEP 5] ERROR: File upload failed - {upload_result}")
+            return {
+                "success": False,
+                "error": "File upload to storage failed",
+                "details": upload_result,
+            }
+    except Exception as e:
+        print(f"[STEP 5] ERROR uploading file: {str(e)}")
+        return {
+            "success": False,
+            "error": f"File upload exception: {str(e)}",
+        }
+
+    # Step 6: Save candidate to database with all fields
+    print("[STEP 6] Saving candidate to database...")
+    candidate_payload = {
         "resume_file_path": upload_result,
         "skills": ai_data.get("skills", []),
         "experience_level": ai_data.get("experience_level"),
         "experience_summary": ai_data.get("experience_summary"),
         "resume_score": score_data.get("resume_score"),
-        "status": "Applied",
-    })
+        "status": "applied",
+        "user_id": user_id,
+        "role_id": role_id,
+        # Note: email is NOT included - identity is based on user_id only
+    }
+    print(f"[STEP 6] Candidate payload: {candidate_payload}")
+    
+    try:
+        candidate_record = await save_candidate(candidate_payload)
+        print(f"[STEP 6] Save result: {candidate_record}")
 
-    if isinstance(candidate_record, dict) and candidate_record.get("error"):
+        if isinstance(candidate_record, dict) and candidate_record.get("error"):
+            error_details = candidate_record.get("details", candidate_record.get("error"))
+            print(f"[STEP 6] ERROR: Failed to save candidate - {candidate_record}")
+            return {
+                "success": False,
+                "error": f"Failed to save candidate: {error_details}",
+                "details": candidate_record,
+            }
+    except Exception as e:
+        print(f"[STEP 6] EXCEPTION saving candidate: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {
             "success": False,
-            "error": "Failed to save candidate",
-            "details": candidate_record,
+            "error": f"Candidate save exception: {str(e)}",
         }
 
+    print(f"[PROCESS-RESUME] SUCCESS! Candidate ID: {candidate_record.get('id')}")
+    print("=" * 60)
+    
     return {
         "success": True,
         "candidate_id": candidate_record.get("id"),
@@ -1058,7 +1485,7 @@ async def screen_candidate(candidate_id: str, role_id: str):
         evaluation_id = evaluation_record.get("id")
 
     # Step 6: Update candidate status based on qualification result
-    new_status = "Screened" if evaluation_result["qualified"] else "Rejected"
+    new_status = "qualified" if evaluation_result["qualified"] else "rejected"
     await supabase_update_by_id("candidates", candidate_id, {"status": new_status})
 
     return {

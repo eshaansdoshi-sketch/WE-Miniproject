@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useUser } from '../UserContext'
+import { useAuth } from '../AuthContext'
 import { getJobRoles } from '../api'
 
 function Apply() {
-    const { user, updateUser } = useUser()
+    const { candidateData, updateCandidateData, STATUS } = useAuth()
     const navigate = useNavigate()
 
     const [roles, setRoles] = useState([])
@@ -14,12 +14,12 @@ function Apply() {
 
     useEffect(() => {
         // If role already selected, skip to upload
-        if (user?.selectedRoleId) {
+        if (candidateData?.selectedRoleId) {
             navigate('/applicant/upload')
             return
         }
         loadRoles()
-    }, [user?.selectedRoleId])
+    }, [candidateData?.selectedRoleId])
 
     const loadRoles = async () => {
         try {
@@ -43,8 +43,8 @@ function Apply() {
     const handleContinue = () => {
         if (!selectedRole) return
 
-        // Save selected role to user state (persists to localStorage)
-        updateUser({
+        // Save selected role to candidate data
+        updateCandidateData({
             selectedRoleId: selectedRole.id,
             selectedRoleName: selectedRole.role_name,
         })

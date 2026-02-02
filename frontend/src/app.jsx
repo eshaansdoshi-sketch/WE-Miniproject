@@ -1,17 +1,17 @@
 import { Routes, Route, Link, Navigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
-import { useUser } from './UserContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ResumeUpload from './pages/ResumeUpload'
 import Screening from './pages/Screening'
 import TestPage from './pages/TestPage'
 import AdminDashboard from './pages/AdminDashboard'
+import CandidateDetailPage from './pages/CandidateDetailPage'
 import Apply from './pages/Apply'
 
-// Protected route wrapper
+// Protected route wrapper - with completed status guard for applicants
 function ProtectedRoute({ children, requiredRole }) {
-    const { user, userRole, loading } = useAuth()
+    const { user, userRole, loading, candidateData, STATUS } = useAuth()
 
     if (loading) {
         return <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>
@@ -33,17 +33,19 @@ function ProtectedRoute({ children, requiredRole }) {
 }
 
 function App() {
-    const { user, userRole, loading, signOut } = useAuth()
-    const { resetUser } = useUser()
+    const { user, userRole, loading, signOut, candidateData, STATUS } = useAuth()
 
     const handleLogout = async () => {
+        // signOut now automatically clears candidate data
         await signOut()
-        resetUser()
     }
 
     if (loading) {
         return <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>
     }
+
+    // Check if candidate has completed assessments
+    const isCompleted = candidateData?.status === STATUS?.COMPLETE
 
     return (
         <div>
@@ -61,10 +63,21 @@ function App() {
                             </>
                         ) : (
                             <>
-                                <Link to="/applicant">Apply</Link>
-                                <Link to="/applicant/upload">Upload</Link>
-                                <Link to="/applicant/screen">Screening</Link>
-                                <Link to="/applicant/test">Tests</Link>
+                                {/* Only show navigation tabs if NOT completed */}
+                                {!isCompleted ? (
+                                    <>
+                                        <Link to="/applicant">Apply</Link>
+                                        <Link to="/applicant/upload">Upload</Link>
+                                        <Link to="/applicant/screen">Screening</Link>
+                                        <Link to="/applicant/test">Tests</Link>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span style={{ color: '#4caf50', fontWeight: 'bold' }}>
+                                            ✓ Application Submitted
+                                        </span>
+                                    </>
+                                )}
                             </>
                         )}
                         <span style={{ float: 'right' }}>
@@ -93,6 +106,11 @@ function App() {
                     <Route path="/admin" element={
                         <ProtectedRoute requiredRole="admin">
                             <AdminDashboard />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/candidate/:candidateId" element={
+                        <ProtectedRoute requiredRole="admin">
+                            <CandidateDetailPage />
                         </ProtectedRoute>
                     } />
 

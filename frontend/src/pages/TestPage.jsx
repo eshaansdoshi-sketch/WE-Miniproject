@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useUser, STATUS } from '../UserContext'
+import { useAuth } from '../AuthContext'
 import { getCandidateTests, submitTest } from '../api'
 
 function TestPage() {
-    const { user, updateUser } = useUser()
+    const { candidateData, updateCandidateData, STATUS } = useAuth()
     const navigate = useNavigate()
 
     const [tests, setTests] = useState([])
@@ -17,27 +17,27 @@ function TestPage() {
 
     // Load tests on mount - simple and direct
     useEffect(() => {
-        if (!user?.candidateId || !user?.selectedRoleId) {
+        if (!candidateData?.candidateId || !candidateData?.selectedRoleId) {
             setLoading(false)
-            if (user?.candidateId && !user?.selectedRoleId) {
+            if (candidateData?.candidateId && !candidateData?.selectedRoleId) {
                 setError('No job role selected. Please select a role first.')
             }
             return
         }
 
-        console.log('[TestPage] Starting to fetch tests for:', user.candidateId, 'role:', user.selectedRoleId)
+        console.log('[TestPage] Starting to fetch tests for:', candidateData.candidateId, 'role:', candidateData.selectedRoleId)
 
-        getCandidateTests(user.candidateId, user.selectedRoleId)
+        getCandidateTests(candidateData.candidateId, candidateData.selectedRoleId)
             .then(data => {
                 console.log('[TestPage] Received response:', data)
 
                 if (data.success && data.tests?.length > 0) {
                     console.log('[TestPage] Setting tests:', data.tests.length, 'tests')
                     setTests(data.tests)
-                    updateUser({ status: STATUS.TESTING })
+                    updateCandidateData({ status: STATUS.TESTING })
                 } else {
                     console.log('[TestPage] No tests found')
-                    setError(data.message || 'No tests available for this role.')
+                    setError(data.message || data.error || 'No tests available for this role.')
                 }
             })
             .catch(err => {
@@ -48,7 +48,7 @@ function TestPage() {
                 console.log('[TestPage] Setting loading to false')
                 setLoading(false)
             })
-    }, [user?.candidateId, user?.selectedRoleId])
+    }, [candidateData?.candidateId, candidateData?.selectedRoleId])
 
     const handleAnswerChange = (questionId, option) => {
         setAnswers(prev => ({ ...prev, [questionId]: option }))
@@ -64,12 +64,12 @@ function TestPage() {
         setSubmitting(true)
 
         try {
-            const data = await submitTest(user.candidateId, currentTest.test_id, testAnswers)
+            const data = await submitTest(candidateData.candidateId, currentTest.test_id, testAnswers)
             console.log('[TestPage] Submit result:', data)
             setResult(data)
 
             if (data.success && currentTestIndex >= tests.length - 1) {
-                updateUser({
+                updateCandidateData({
                     status: STATUS.COMPLETE,
                     finalScore: data.interview_readiness_score,
                 })
@@ -87,13 +87,26 @@ function TestPage() {
         setResult(null)
     }
 
+    // If completed, show completion message (no navigation allowed)
+    if (candidateData?.status === STATUS.COMPLETE) {
+        return (
+            <div>
+                <h1>🎉 Application Submitted</h1>
+                <div style={{ padding: 20, background: '#e8f5e9', borderRadius: 8 }}>
+                    <p className="success">✓ Your assessments are complete!</p>
+                    {candidateData.finalScore && <p><strong>Interview Readiness Score:</strong> {candidateData.finalScore}%</p>}
+                    <p style={{ marginTop: 15 }}>Our team will review your application and contact you soon.</p>
+                </div>
+            </div>
+        )
+    }
+
     // No user
-    if (!user?.candidateId) {
+    if (!candidateData?.candidateId) {
         return (
             <div>
                 <h1>Skill Tests</h1>
-                <p>Please upload your resume first.</p>
-                <button onClick={() => navigate('/')}>← Start</button>
+                <p>Please complete the previous steps first.</p>
             </div>
         )
     }
@@ -114,7 +127,7 @@ function TestPage() {
             <div>
                 <h1>Skill Tests</h1>
                 <p className="error">{error || 'No tests available.'}</p>
-                <button onClick={() => navigate('/screen')}>← Back to Screening</button>
+                {/* NO back navigation - one-time flow */}
             </div>
         )
     }
@@ -127,9 +140,8 @@ function TestPage() {
                 <div style={{ padding: 20, background: '#e8f5e9', borderRadius: 8 }}>
                     <p><strong>Score:</strong> {result.score}%</p>
                     <p><strong>Interview Readiness:</strong> {result.interview_readiness_score}%</p>
-                    <p><strong>Status:</strong> {result.status}</p>
+                    <p style={{ marginTop: 15 }}>Your assessments are complete. Our team will contact you soon.</p>
                 </div>
-                <button onClick={() => navigate('/hr')} style={{ marginTop: 20 }}>Dashboard →</button>
             </div>
         )
     }

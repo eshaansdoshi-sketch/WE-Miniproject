@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useUser, STATUS } from '../UserContext'
+import { useAuth } from '../AuthContext'
 import { screenCandidate, getJobRoles } from '../api'
 
 function Screening() {
-    const { user, updateUser } = useUser()
+    const { candidateData, updateCandidateData, resetForNewRole, STATUS } = useAuth()
     const navigate = useNavigate()
 
     const [roles, setRoles] = useState([])
@@ -15,9 +15,9 @@ function Screening() {
     const [stepComplete, setStepComplete] = useState(null)
 
     useEffect(() => {
-        if (!user || !user.candidateId) return
+        if (!candidateData || !candidateData.candidateId) return
         loadRolesAndScreen()
-    }, [user])
+    }, [candidateData])
 
     const loadRolesAndScreen = async () => {
         try {
@@ -27,7 +27,7 @@ function Screening() {
                 const firstRole = data.job_roles[0]
                 setSelectedRoleId(firstRole.id)
 
-                if (user.status === STATUS.UPLOADED) {
+                if (candidateData.status === STATUS.UPLOADED) {
                     await runScreening(firstRole.id)
                 }
             } else {
@@ -44,15 +44,15 @@ function Screening() {
         setError(null)
 
         try {
-            const data = await screenCandidate(user.candidateId, roleId)
+            const data = await screenCandidate(candidateData.candidateId, roleId)
             setResult(data)
 
             if (data.success) {
                 if (data.qualified) {
-                    updateUser({ status: STATUS.SCREENED, qualified: true, roleId })
+                    updateCandidateData({ status: STATUS.SCREENED, qualified: true, roleId })
                     setStepComplete('✓ Screening Complete! You are qualified.')
                 } else {
-                    updateUser({ status: STATUS.REJECTED, qualified: false, feedback: data.feedback })
+                    updateCandidateData({ status: STATUS.REJECTED, qualified: false, feedback: data.feedback })
                 }
             }
         } catch (err) {
@@ -64,37 +64,66 @@ function Screening() {
 
     // No tests assignment here - just navigate. Tests page handles it.
     const proceedToTests = () => {
-        updateUser({ status: STATUS.TESTING })
-        navigate('/test')
+        updateCandidateData({ status: STATUS.TESTING })
+        navigate('/applicant/test')
     }
 
-    // No user
-    if (!user || !user.candidateId) {
+    // Handle apply for different role (only for rejected candidates)
+    const handleApplyDifferentRole = () => {
+        resetForNewRole()
+        navigate('/applicant')
+    }
+
+    // If completed, show completion message (no navigation allowed)
+    if (candidateData?.status === STATUS.COMPLETE) {
         return (
             <div>
-                <h1>Screening</h1>
-                <p>Upload your resume first.</p>
-                <button onClick={() => navigate('/')}>← Upload</button>
+                <h1>Application Submitted</h1>
+                <div style={{ padding: 20, background: '#e8f5e9', borderRadius: 8 }}>
+                    <p className="success">✓ Your assessments are complete!</p>
+                    <p>Our team will review your application and contact you soon.</p>
+                </div>
             </div>
         )
     }
 
-    // Rejected
-    if (user.status === STATUS.REJECTED) {
+    // No user
+    if (!candidateData || !candidateData.candidateId) {
+        return (
+            <div>
+                <h1>Screening</h1>
+                <p>Please complete the previous steps first.</p>
+            </div>
+        )
+    }
+
+    // Rejected - show option to apply for different role
+    if (candidateData.status === STATUS.REJECTED) {
         return (
             <div>
                 <h1>Screening Result</h1>
                 <div style={{ padding: 20, background: '#ffebee', borderRadius: 8 }}>
                     <h2 style={{ color: '#c62828' }}>✗ Not Qualified</h2>
-                    <p>{user.feedback}</p>
+                    <p>{candidateData.feedback}</p>
                 </div>
-                <button onClick={() => navigate('/')} style={{ marginTop: 20 }}>← Start Over</button>
+
+                {/* Option to apply for a different role */}
+                <div style={{ marginTop: 30, padding: 20, background: '#e3f2fd', borderRadius: 8 }}>
+                    <h3>Want to try a different role?</h3>
+                    <p>You can apply for a different position that better matches your skills.</p>
+                    <button
+                        onClick={handleApplyDifferentRole}
+                        style={{ background: '#1976d2', marginTop: 10 }}
+                    >
+                        Apply for a Different Role →
+                    </button>
+                </div>
             </div>
         )
     }
 
     // Already passed
-    if (user.status === STATUS.SCREENED || user.status === STATUS.TESTING || user.status === STATUS.COMPLETE) {
+    if (candidateData.status === STATUS.SCREENED || candidateData.status === STATUS.TESTING) {
         return (
             <div>
                 <h1>✓ Screening Passed!</h1>
@@ -155,11 +184,23 @@ function Screening() {
                                 </button>
                             </div>
                         )}
+
+                        {!result.qualified && (
+                            <div style={{ marginTop: 30, padding: 20, background: '#e3f2fd', borderRadius: 8 }}>
+                                <h3>Want to try a different role?</h3>
+                                <p>You can apply for a different position that better matches your skills.</p>
+                                <button
+                                    onClick={handleApplyDifferentRole}
+                                    style={{ background: '#1976d2', marginTop: 10 }}
+                                >
+                                    Apply for a Different Role →
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div>
                         <p className="error">{result.error}</p>
-                        <button onClick={() => runScreening(selectedRoleId)}>Retry</button>
                     </div>
                 )}
             </div>

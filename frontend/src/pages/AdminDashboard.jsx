@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { getJobRoles, createJobRole, getHRCandidateSummary } from '../api'
 
 function AdminDashboard() {
@@ -229,6 +230,7 @@ function AdminDashboard() {
                                 <th>Qualified</th>
                                 <th>Test Score</th>
                                 <th>Status</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -240,6 +242,11 @@ function AdminDashboard() {
                                     <td>{c.avg_test_score ?? '-'}</td>
                                     <td className={`status-${c.status?.toLowerCase()}`}>
                                         <strong>{c.status}</strong>
+                                    </td>
+                                    <td>
+                                        <Link to={`/admin/candidate/${c.candidate_id}`}>
+                                            View Details
+                                        </Link>
                                     </td>
                                 </tr>
                             ))}

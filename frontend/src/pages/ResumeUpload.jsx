@@ -1,18 +1,31 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useUser, STATUS } from '../UserContext'
+import { useAuth } from '../AuthContext'
 import { processResume } from '../api'
 
 function ResumeUpload() {
-    const { user, updateUser, resetUser } = useUser()
+    const { user: authUser, candidateData, updateCandidateData, STATUS } = useAuth()
     const navigate = useNavigate()
 
     const [file, setFile] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
 
+    // If completed, show completion message (no navigation allowed)
+    if (candidateData?.status === STATUS.COMPLETE) {
+        return (
+            <div>
+                <h1>Application Submitted</h1>
+                <div style={{ padding: 20, background: '#e8f5e9', borderRadius: 8 }}>
+                    <p className="success">✓ Your assessments are complete!</p>
+                    <p>Our team will review your application and contact you soon.</p>
+                </div>
+            </div>
+        )
+    }
+
     // If no role selected, redirect to role selection
-    if (!user?.selectedRoleId) {
+    if (!candidateData?.selectedRoleId) {
         return (
             <div>
                 <h1>Upload Resume</h1>
@@ -23,18 +36,18 @@ function ResumeUpload() {
     }
 
     // If user already has progress beyond upload, show continue options
-    if (user?.status && user.status !== STATUS.NONE) {
+    if (candidateData?.status && candidateData.status !== STATUS.NONE) {
         return (
             <div>
                 <h1>Welcome Back!</h1>
 
                 <div style={{ padding: 20, background: '#e3f2fd', borderRadius: 8, marginBottom: 20 }}>
-                    <p><strong>Applying for:</strong> {user.selectedRoleName}</p>
-                    {user.candidateId && <p><strong>Candidate ID:</strong> <code>{user.candidateId}</code></p>}
-                    <p><strong>Status:</strong> {user.status}</p>
+                    <p><strong>Applying for:</strong> {candidateData.selectedRoleName}</p>
+                    {candidateData.candidateId && <p><strong>Candidate ID:</strong> <code>{candidateData.candidateId}</code></p>}
+                    <p><strong>Status:</strong> {candidateData.status}</p>
                 </div>
 
-                {user.status === STATUS.UPLOADED && (
+                {candidateData.status === STATUS.UPLOADED && (
                     <div>
                         <p>Resume uploaded. Continue to screening:</p>
                         <button onClick={() => navigate('/applicant/screen')} style={{ background: '#4caf50' }}>
@@ -43,7 +56,7 @@ function ResumeUpload() {
                     </div>
                 )}
 
-                {user.status === STATUS.SCREENED && (
+                {candidateData.status === STATUS.SCREENED && (
                     <div>
                         <p>Screening passed. Continue to tests:</p>
                         <button onClick={() => navigate('/applicant/test')} style={{ background: '#4caf50' }}>
@@ -52,7 +65,7 @@ function ResumeUpload() {
                     </div>
                 )}
 
-                {user.status === STATUS.TESTING && (
+                {candidateData.status === STATUS.TESTING && (
                     <div>
                         <p>Tests in progress:</p>
                         <button onClick={() => navigate('/applicant/test')} style={{ background: '#4caf50' }}>
@@ -61,23 +74,14 @@ function ResumeUpload() {
                     </div>
                 )}
 
-                {user.status === STATUS.COMPLETE && (
-                    <div>
-                        <p className="success">✓ All assessments completed!</p>
-                    </div>
-                )}
-
-                {user.status === STATUS.REJECTED && (
+                {candidateData.status === STATUS.REJECTED && (
                     <div>
                         <p>Unfortunately, you did not qualify.</p>
-                        <p style={{ color: '#666' }}>{user.feedback}</p>
+                        <p style={{ color: '#666' }}>{candidateData.feedback}</p>
                     </div>
                 )}
 
-                <div style={{ marginTop: 30, paddingTop: 20, borderTop: '1px solid #ddd' }}>
-                    <p style={{ fontSize: 12, color: '#666' }}>Want to start fresh?</p>
-                    <button onClick={resetUser} style={{ background: '#f44336' }}>Start Over</button>
-                </div>
+                {/* NO Start Over button - one-time assessment only */}
             </div>
         )
     }
@@ -88,12 +92,22 @@ function ResumeUpload() {
         setLoading(true)
         setError(null)
 
+        // Debug logging - verify UUIDs are being sent correctly
+        console.log('=== RESUME UPLOAD DEBUG ===')
+        console.log('Sending role_id:', candidateData.selectedRoleId)
+        console.log('Sending user_id:', authUser.id)
+        console.log('Role ID type:', typeof candidateData.selectedRoleId)
+        console.log('User ID type:', typeof authUser.id)
+        console.log('Selected role name:', candidateData.selectedRoleName)
+        console.log('User email:', authUser.email)
+        console.log('===========================')
+
         try {
-            const data = await processResume(file)
+            const data = await processResume(file, authUser.id, candidateData.selectedRoleId, authUser.email)
 
             if (data.success && data.candidate_id) {
-                // Save candidate ID and status, keep role info
-                updateUser({
+                // Save candidate ID and status
+                updateCandidateData({
                     candidateId: data.candidate_id,
                     status: STATUS.UPLOADED,
                 })
@@ -113,13 +127,8 @@ function ResumeUpload() {
             <h1>Upload Resume</h1>
 
             <div style={{ padding: 15, background: '#e8f5e9', borderRadius: 8, marginBottom: 20 }}>
-                <strong>Applying for:</strong> {user.selectedRoleName}
-                <button
-                    onClick={() => navigate('/applicant')}
-                    style={{ marginLeft: 15, padding: '4px 10px', fontSize: 12, background: '#666' }}
-                >
-                    Change
-                </button>
+                <strong>Applying for:</strong> {candidateData.selectedRoleName}
+                {/* NO Change button - role selection is final */}
             </div>
 
             <div style={{ padding: 20, background: '#f9f9f9', borderRadius: 8 }}>
