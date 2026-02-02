@@ -52,11 +52,14 @@ export function AuthProvider({ children }) {
                     authUserId: userId,
                     candidateId: candidate.id,
                     status: mapBackendStatus(candidate.status),
+                    rawStatus: candidate.status, // Keep original for display
                     selectedRoleId: candidate.role_id || null,
-                    selectedRoleName: null,
+                    selectedRoleName: candidate.role_name || null, // Now from backend
+                    adminNotes: candidate.admin_notes || null, // Admin feedback
                     qualified: candidate.qualified || null,
                     feedback: candidate.feedback || null,
                     finalScore: candidate.resume_score || null,
+                    appliedAt: candidate.applied_at || null,
                 }
                 setCandidateData(data)
                 return data

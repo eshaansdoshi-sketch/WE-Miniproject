@@ -8,6 +8,7 @@ import TestPage from './pages/TestPage'
 import AdminDashboard from './pages/AdminDashboard'
 import CandidateDetailPage from './pages/CandidateDetailPage'
 import Apply from './pages/Apply'
+import ApplicantDashboard from './pages/ApplicantDashboard'
 
 // Protected route wrapper - with completed status guard for applicants
 function ProtectedRoute({ children, requiredRole }) {
@@ -44,7 +45,11 @@ function App() {
         return <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>
     }
 
-    // Check if candidate has completed assessments
+    // Check if candidate has an active application (anything beyond role selection)
+    const hasApplication = candidateData?.candidateId
+    // Check specific terminal statuses where no further action is needed
+    const rawStatus = candidateData?.rawStatus?.toLowerCase()
+    const isTerminalStatus = ['hired', 'rejected', 'interview'].includes(rawStatus)
     const isCompleted = candidateData?.status === STATUS?.COMPLETE
 
     return (
@@ -63,20 +68,28 @@ function App() {
                             </>
                         ) : (
                             <>
-                                {/* Only show navigation tabs if NOT completed */}
-                                {!isCompleted ? (
+                                {/* Dashboard link - always visible when there's an application */}
+                                {hasApplication && (
+                                    <Link to="/applicant/dashboard">My Status</Link>
+                                )}
+
+                                {/* Only show flow tabs if NOT in terminal status */}
+                                {!isTerminalStatus && !isCompleted && (
                                     <>
                                         <Link to="/applicant">Apply</Link>
                                         <Link to="/applicant/upload">Upload</Link>
                                         <Link to="/applicant/screen">Screening</Link>
                                         <Link to="/applicant/test">Tests</Link>
                                     </>
-                                ) : (
-                                    <>
-                                        <span style={{ color: '#4caf50', fontWeight: 'bold' }}>
-                                            ✓ Application Submitted
-                                        </span>
-                                    </>
+                                )}
+
+                                {/* Show completed badge */}
+                                {(isTerminalStatus || isCompleted) && (
+                                    <span style={{ color: '#4caf50', fontWeight: 'bold', marginLeft: 10 }}>
+                                        {rawStatus === 'hired' ? '🎉 Hired!' :
+                                            rawStatus === 'interview' ? '🎯 Interview' :
+                                                rawStatus === 'rejected' ? '' : '✓ Complete'}
+                                    </span>
                                 )}
                             </>
                         )}
@@ -96,10 +109,10 @@ function App() {
                 <Routes>
                     {/* Public routes */}
                     <Route path="/login" element={
-                        user ? <Navigate to={userRole === 'admin' ? '/admin' : '/applicant'} replace /> : <Login />
+                        user ? <Navigate to={userRole === 'admin' ? '/admin' : '/applicant/dashboard'} replace /> : <Login />
                     } />
                     <Route path="/register" element={
-                        user ? <Navigate to={userRole === 'admin' ? '/admin' : '/applicant'} replace /> : <Register />
+                        user ? <Navigate to={userRole === 'admin' ? '/admin' : '/applicant/dashboard'} replace /> : <Register />
                     } />
 
                     {/* Admin routes */}
@@ -118,6 +131,11 @@ function App() {
                     <Route path="/applicant" element={
                         <ProtectedRoute requiredRole="applicant">
                             <Apply />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/applicant/dashboard" element={
+                        <ProtectedRoute requiredRole="applicant">
+                            <ApplicantDashboard />
                         </ProtectedRoute>
                     } />
                     <Route path="/applicant/upload" element={
@@ -139,7 +157,7 @@ function App() {
                     {/* Default redirect */}
                     <Route path="/" element={
                         user ? (
-                            <Navigate to={userRole === 'admin' ? '/admin' : '/applicant'} replace />
+                            <Navigate to={userRole === 'admin' ? '/admin' : '/applicant/dashboard'} replace />
                         ) : (
                             <Navigate to="/login" replace />
                         )

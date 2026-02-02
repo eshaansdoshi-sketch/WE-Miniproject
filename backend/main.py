@@ -320,7 +320,8 @@ async def get_candidate_by_user(user_id: str):
     Fetch candidate record for an authenticated user.
     Used to restore application state after login.
     
-    Returns the candidate record if exists, None if new applicant.
+    Returns the candidate record with role name if exists, None if new applicant.
+    Includes: status, admin_notes, role_name for dashboard display.
     """
     print(f"[GetCandidateByUser] Looking up candidate for user_id={user_id}")
     
@@ -334,7 +335,30 @@ async def get_candidate_by_user(user_id: str):
         if isinstance(records, list) and len(records) > 0:
             candidate = records[0]
             print(f"[GetCandidateByUser] Found candidate_id={candidate.get('id')}, status={candidate.get('status')}")
-            return candidate
+            
+            # Fetch role name if role_id exists
+            role_name = None
+            role_id = candidate.get("role_id")
+            if role_id:
+                role = await supabase_select_by_id("job_roles", role_id)
+                if role and not (isinstance(role, dict) and role.get("error")):
+                    role_name = role.get("role_name")
+            
+            # Return enriched candidate data
+            return {
+                "id": candidate.get("id"),
+                "user_id": candidate.get("user_id"),
+                "status": candidate.get("status"),
+                "admin_notes": candidate.get("admin_notes"),
+                "role_id": role_id,
+                "role_name": role_name,
+                "email": candidate.get("email"),
+                "resume_score": candidate.get("resume_score"),
+                "skills": candidate.get("skills"),
+                "experience_level": candidate.get("experience_level"),
+                "qualified": candidate.get("qualified"),
+                "applied_at": candidate.get("applied_at"),
+            }
         
         print(f"[GetCandidateByUser] No candidate found for user_id={user_id}")
         return None
