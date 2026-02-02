@@ -23,6 +23,7 @@ const mapBackendStatus = (backendStatus) => {
         'approved': STATUS.SCREENED,
         'interview': STATUS.TESTING,
         'hired': STATUS.COMPLETE,
+        'completed': STATUS.COMPLETE, // Added for compatibility
         'uploaded': STATUS.UPLOADED,
         'screened': STATUS.SCREENED,
         'testing': STATUS.TESTING,

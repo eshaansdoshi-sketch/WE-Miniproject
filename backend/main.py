@@ -1055,7 +1055,7 @@ async def submit_test(candidate_id: str, submission: TestSubmission):
         interview_readiness = resume_score
     
     # Update status based on interview readiness
-    new_status = "completed"  # One-time assessment, no retakes allowed
+    new_status = "hired"  # One-time assessment, no retakes allowed - use 'hired' as completion status
     await supabase_update_by_id("candidates", candidate_id, {"status": new_status})
     
     return {
