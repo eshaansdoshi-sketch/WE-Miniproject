@@ -3,6 +3,24 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { processResume } from '../api'
 
+// Helper to map backend status (duplicated for now, should be in utils)
+const mapBackendStatus = (backendStatus, STATUS) => {
+    const statusMap = {
+        'applied': STATUS.UPLOADED,
+        'qualified': STATUS.SCREENED,
+        'rejected': STATUS.REJECTED,
+        'approved': STATUS.SCREENED,
+        'interview': STATUS.TESTING,
+        'hired': STATUS.COMPLETE,
+        'completed': STATUS.COMPLETE,
+        'uploaded': STATUS.UPLOADED,
+        'screened': STATUS.SCREENED,
+        'testing': STATUS.TESTING,
+        'complete': STATUS.COMPLETE,
+    }
+    return statusMap[backendStatus?.toLowerCase()] || STATUS.NONE
+}
+
 function ResumeUpload() {
     const { user: authUser, candidateData, updateCandidateData, STATUS } = useAuth()
     const navigate = useNavigate()
@@ -113,7 +131,34 @@ function ResumeUpload() {
                 })
                 navigate('/applicant/screen')
             } else {
-                setError(data.error || 'Failed to process resume')
+                // Check for duplicate/completed application errors
+                if (data.error && (
+                    data.error.includes("already applied") ||
+                    data.error.includes("already completed") ||
+                    data.error.includes("previously rejected")
+                )) {
+                    setError(data.error)
+                    // If we have an existing candidate_id, update context to restore session
+                    if (data.existing_candidate_id) {
+                        console.log('Restoring existing session:', data.existing_candidate_id)
+                        updateCandidateData({
+                            candidateId: data.existing_candidate_id,
+                            status: mapBackendStatus(data.current_status || 'applied', STATUS),
+                        })
+                        // Redirect after 2 seconds so user sees the message
+                        setTimeout(() => {
+                            if (data.error.includes("already completed")) {
+                                // If completed, they can't do anything else
+                                navigate('/applicant')
+                            } else {
+                                // If just applied, go to next step
+                                navigate('/applicant/screen')
+                            }
+                        }, 2000)
+                    }
+                } else {
+                    setError(data.error || 'Failed to process resume')
+                }
             }
         } catch (err) {
             setError(err.message)

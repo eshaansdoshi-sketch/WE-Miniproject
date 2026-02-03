@@ -14,6 +14,7 @@ function TestPage() {
     const [submitting, setSubmitting] = useState(false)
     const [result, setResult] = useState(null)
     const [error, setError] = useState(null)
+    const [timeLeft, setTimeLeft] = useState(null) // in seconds
 
     // Load tests on mount - simple and direct
     useEffect(() => {
@@ -35,6 +36,11 @@ function TestPage() {
                     console.log('[TestPage] Setting tests:', data.tests.length, 'tests')
                     setTests(data.tests)
                     updateCandidateData({ status: STATUS.TESTING })
+
+                    // Set timer if provided (convert minutes to seconds)
+                    if (data.time_limit) {
+                        setTimeLeft(data.time_limit * 60)
+                    }
                 } else {
                     console.log('[TestPage] No tests found')
                     setError(data.message || data.error || 'No tests available for this role.')
@@ -50,11 +56,41 @@ function TestPage() {
             })
     }, [candidateData?.candidateId, candidateData?.selectedRoleId])
 
+    // Timer effect
+    useEffect(() => {
+        if (timeLeft === null || timeLeft <= 0) return
+
+        const timer = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) {
+                    clearInterval(timer)
+                    handleTimeUp()
+                    return 0
+                }
+                return prev - 1
+            })
+        }, 1000)
+
+        return () => clearInterval(timer)
+    }, [timeLeft])
+
+    const handleTimeUp = async () => {
+        // Auto-submit current test regardless of completion
+        alert("Time's up! Submitting your current test and ending the session.")
+        await submitCurrentTest(true) // Pass flag to indicate forced submission
+    }
+
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60)
+        const secs = seconds % 60
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`
+    }
+
     const handleAnswerChange = (questionId, option) => {
         setAnswers(prev => ({ ...prev, [questionId]: option }))
     }
 
-    const submitCurrentTest = async () => {
+    const submitCurrentTest = async (forced = false) => {
         const currentTest = tests[currentTestIndex]
         const testAnswers = currentTest.questions.map(q => ({
             question_id: q.question_id,
@@ -68,7 +104,8 @@ function TestPage() {
             console.log('[TestPage] Submit result:', data)
             setResult(data)
 
-            if (data.success && currentTestIndex >= tests.length - 1) {
+            // If it's the last test OR forced (time up), finish
+            if (data.success && (currentTestIndex >= tests.length - 1 || forced)) {
                 updateCandidateData({
                     status: STATUS.COMPLETE,
                     finalScore: data.interview_readiness_score,
@@ -169,7 +206,21 @@ function TestPage() {
 
     return (
         <div>
-            <h1>Test: {currentTest.test_id.replace(/_/g, ' ').replace('v1', '')}</h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h1>Test: {currentTest.test_id.replace(/_/g, ' ').replace('v1', '')}</h1>
+                {timeLeft !== null && (
+                    <div style={{
+                        fontSize: '1.2rem',
+                        fontWeight: 'bold',
+                        color: timeLeft < 60 ? 'red' : '#333',
+                        background: '#f5f5f5',
+                        padding: '5px 15px',
+                        borderRadius: 20
+                    }}>
+                        ⏱ {formatTime(timeLeft)}
+                    </div>
+                )}
+            </div>
 
             <div style={{ padding: 10, background: '#f0f0f0', borderRadius: 4, marginBottom: 20 }}>
                 Test {currentTestIndex + 1}/{tests.length} | {answeredCount}/{totalQuestions} answered

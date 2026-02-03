@@ -111,6 +111,7 @@ class JobRoleCreate(BaseModel):
     preferred_skills: list[str] = []
     min_experience_level: str = "junior"  # junior/mid/senior
     min_resume_score: int = 50
+    time_limit: int = 3  # Test time limit in minutes
     # Legacy fields for backward compatibility
     skill_weights: dict[str, float] | None = None
     role_level: str | None = None
@@ -132,6 +133,7 @@ class JobRoleUpdate(BaseModel):
     preferred_skills: list[str] | None = None
     min_experience_level: str | None = None
     min_resume_score: int | None = None
+    time_limit: int | None = None
 
 
 class TestAnswer(BaseModel):
@@ -162,6 +164,7 @@ async def create_job_role(job_role: JobRoleCreate):
         "preferred_skills": job_role.preferred_skills,
         "min_experience_level": job_role.min_experience_level,
         "min_resume_score": job_role.min_resume_score,
+        "time_limit": job_role.time_limit,
     }
     
     # Add legacy fields if provided
@@ -224,6 +227,8 @@ async def update_job_role(role_id: str, updates: JobRoleUpdate):
         update_data["min_experience_level"] = updates.min_experience_level
     if updates.min_resume_score is not None:
         update_data["min_resume_score"] = updates.min_resume_score
+    if updates.time_limit is not None:
+        update_data["time_limit"] = updates.time_limit
 
     if not update_data:
         return {
@@ -326,10 +331,14 @@ async def get_candidate_by_user(user_id: str):
     print(f"[GetCandidateByUser] Looking up candidate for user_id={user_id}")
     
     try:
-        records = await supabase_select_where("candidates", {"user_id": user_id})
+        # Use str(user_id) to be safe
+        records = await supabase_select_where("candidates", {"user_id": str(user_id)})
+        
+        # Log the raw result to understand what we are getting
+        print(f"[GetCandidateByUser] Raw records type: {type(records)}")
         
         if isinstance(records, dict) and records.get("error"):
-            print(f"[GetCandidateByUser] Error: {records}")
+            print(f"[GetCandidateByUser] API Error: {records}")
             return None
         
         if isinstance(records, list) and len(records) > 0:
@@ -360,11 +369,17 @@ async def get_candidate_by_user(user_id: str):
                 "applied_at": candidate.get("applied_at"),
             }
         
-        print(f"[GetCandidateByUser] No candidate found for user_id={user_id}")
+        if isinstance(records, list) and len(records) == 0:
+             print(f"[GetCandidateByUser] No records found (empty list) for user_id={user_id}")
+             return None
+
+        print(f"[GetCandidateByUser] Unhandled records format: {records}")
         return None
         
     except Exception as e:
         print(f"[GetCandidateByUser] Exception: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 
@@ -783,6 +798,14 @@ async def assign_tests_to_candidate(candidate_id: str, role_id: str):
                             "test_id": test_id,
                         }
 
+    return {
+        "success": True,
+        "candidate_id": candidate_id,
+        "role_id": role_id,
+        "time_limit": job_role.get("time_limit", 3),  # Default to 3 minutes if not set
+        "assigned_tests": assigned_tests,
+    }
+
     test_ids_assigned = [t["test_id"] for t in assigned_tests]
     print(f"[AssignTests] test_ids_assigned={test_ids_assigned}")
     
@@ -1005,6 +1028,7 @@ async def get_candidate_tests(candidate_id: str, role_id: str):
         "role_id": role_id,
         "tests": tests_list,
         "total_questions": sum(len(t["questions"]) for t in tests_list),
+        "time_limit": job_role.get("time_limit", 3),
     }
 
 

@@ -31,6 +31,9 @@ async def save_candidate(candidate_data: dict) -> dict:
     print("=== INSERTING CANDIDATE ===")
     print(f"user_id: {user_id} (type: {type(user_id).__name__})")
     print(f"role_id: {role_id} (type: {type(role_id).__name__})")
+    
+    # Debug whole dict keys to see what we actually got
+    print("candidate_data keys:", list(candidate_data.keys()))
     print("=" * 60)
     
     # Validate UUID format for required fields
@@ -73,9 +76,9 @@ async def save_candidate(candidate_data: dict) -> dict:
     # Remove None values from payload to avoid database issues
     payload = {k: v for k, v in payload.items() if v is not None}
 
-    print("Final payload (None values removed):")
+    print("Final payload to Supabase:")
     for key, value in payload.items():
-        print(f"  {key}: {value}")
+        print(f"  {key}: {str(value)[:50]}..." if isinstance(value, str) and len(value) > 50 else f"  {key}: {value}")
     print("=" * 60)
     
     try:
