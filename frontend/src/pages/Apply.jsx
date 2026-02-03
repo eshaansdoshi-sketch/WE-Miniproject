@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { getJobRoles } from '../api'
+import LoadingSpinner from '../components/ui/LoadingSpinner'
 
 function Apply() {
     const { candidateData, updateCandidateData, STATUS } = useAuth()
@@ -54,9 +55,10 @@ function Apply() {
 
     if (loading) {
         return (
-            <div>
+            <div style={{ textAlign: 'center', marginTop: 50 }}>
                 <h1>Apply for a Position</h1>
-                <p>Loading available positions...</p>
+                <LoadingSpinner />
+                <p style={{ marginTop: 20 }}>Loading available positions...</p>
             </div>
         )
     }

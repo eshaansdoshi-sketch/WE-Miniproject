@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { supabase } from '../supabaseClient'
+import LoadingSpinner from '../components/ui/LoadingSpinner'
 
 function Register() {
     const { signUp } = useAuth()
@@ -126,6 +127,11 @@ function Register() {
                 <button type="submit" disabled={loading} style={{ width: '100%', padding: 12 }}>
                     {loading ? 'Creating account...' : 'Register'}
                 </button>
+                {loading && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 15 }}>
+                        <LoadingSpinner />
+                    </div>
+                )}
             </form>
 
             {error && <p className="error" style={{ marginTop: 15 }}>{error}</p>}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { screenCandidate, getJobRoles } from '../api'
+import LoadingSpinner from '../components/ui/LoadingSpinner'
 
 function Screening() {
     const { candidateData, updateCandidateData, resetForNewRole, STATUS } = useAuth()
@@ -149,8 +150,9 @@ function Screening() {
     // Loading
     if (loading) {
         return (
-            <div>
-                <h1>Evaluating...</h1>
+            <div style={{ textAlign: 'center', marginTop: 50 }}>
+                <LoadingSpinner />
+                <h2 style={{ marginTop: 20 }}>Evaluating...</h2>
                 <p>🔄 Checking your qualifications...</p>
             </div>
         )
@@ -211,7 +213,12 @@ function Screening() {
     return (
         <div>
             <h1>Screening</h1>
-            {error ? <p className="error">{error}</p> : <p>Loading...</p>}
+            {error ? <p className="error">{error}</p> : (
+                <div style={{ textAlign: 'center', marginTop: 20 }}>
+                    <LoadingSpinner />
+                    <p>Loading roles...</p>
+                </div>
+            )}
         </div>
     )
 }

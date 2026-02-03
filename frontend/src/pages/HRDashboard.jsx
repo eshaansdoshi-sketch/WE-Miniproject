@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getHRCandidateSummary } from '../api'
+import LoadingSpinner from '../components/ui/LoadingSpinner'
 
 function HRDashboard() {
     const [candidates, setCandidates] = useState([])
@@ -36,6 +37,7 @@ function HRDashboard() {
             <button onClick={loadCandidates} disabled={loading}>
                 {loading ? 'Loading...' : 'Load Candidates'}
             </button>
+            {loading && <LoadingSpinner />}
 
             {error && <p className="error">Error: {error}</p>}
 

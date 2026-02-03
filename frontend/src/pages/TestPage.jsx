@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { getCandidateTests, submitTest } from '../api'
+import LoadingSpinner from '../components/ui/LoadingSpinner'
 
 function TestPage() {
     const { candidateData, updateCandidateData, STATUS } = useAuth()
@@ -151,8 +152,9 @@ function TestPage() {
     // Loading
     if (loading) {
         return (
-            <div>
-                <h1>Loading Tests...</h1>
+            <div style={{ textAlign: 'center', marginTop: 50 }}>
+                <LoadingSpinner />
+                <h2 style={{ marginTop: 20 }}>Loading Tests...</h2>
                 <p>Fetching your questions...</p>
             </div>
         )
@@ -248,7 +250,12 @@ function TestPage() {
                 disabled={answeredCount < totalQuestions || submitting}
                 style={{ padding: '12px 30px', marginTop: 20 }}
             >
-                {submitting ? 'Submitting...' : 'Submit'}
+                {submitting ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <span style={{ marginBottom: 10 }}>Submitting...</span>
+                        <LoadingSpinner />
+                    </div>
+                ) : 'Submit'}
             </button>
 
             {answeredCount < totalQuestions && (

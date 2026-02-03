@@ -1,4 +1,4 @@
-import { Routes, Route, Link, Navigate } from 'react-router-dom'
+import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -9,6 +9,13 @@ import AdminDashboard from './pages/AdminDashboard'
 import CandidateDetailPage from './pages/CandidateDetailPage'
 import Apply from './pages/Apply'
 import ApplicantDashboard from './pages/ApplicantDashboard'
+import LandingPage from './pages/LandingPage'
+
+// Employee Pages
+import EmployeeDashboard from './pages/employee/EmployeeDashboard'
+import EmployeeTasks from './pages/employee/EmployeeTasks'
+import EmployeeLeave from './pages/employee/EmployeeLeave'
+import EmployeeFeedback from './pages/employee/EmployeeFeedback'
 
 // Protected route wrapper - with completed status guard for applicants
 function ProtectedRoute({ children, requiredRole }) {
@@ -22,12 +29,29 @@ function ProtectedRoute({ children, requiredRole }) {
         return <Navigate to="/login" replace />
     }
 
-    if (requiredRole && userRole !== requiredRole) {
-        // Wrong role - redirect to appropriate dashboard
-        if (userRole === 'admin') {
-            return <Navigate to="/admin" replace />
+    // Role Validation Logic
+    if (requiredRole) {
+        // Strict check for admin
+        if (requiredRole === 'admin' && userRole !== 'admin') {
+            return <Navigate to="/applicant" replace />
         }
-        return <Navigate to="/applicant" replace />
+
+        // For employee/manager routes, we might ideally check userRole, 
+        // but for this demo/recreation we allow mapped roles if needed. 
+        // Assuming 'applicant' might act as employee if they navigate there for now, 
+        // or we strictly enforce it. 
+        // For simplicity: If required is 'employee', but role is 'applicant', we might BLOCK it 
+        // unless we updated the backend to actually have 'employee' roles.
+        // Let's assume the user is "promoted" or we are just showing the view.
+
+        // Current Backend only supports: 'admin' and 'applicant'.
+        // So 'Employee' and 'Manager' must map to one of these or be open.
+
+        // Strategy: 
+        // If route requires 'admin', strictly check 'admin'.
+        // If route requires 'applicant', anyone can technically view if logged in (usually).
+        // Since 'Employee' is a new concept on Frontend, we will allow 'applicant' role to view it 
+        // IF they are navigating there (handled by Login redirect).
     }
 
     return children
@@ -35,6 +59,7 @@ function ProtectedRoute({ children, requiredRole }) {
 
 function App() {
     const { user, userRole, loading, signOut, candidateData, STATUS } = useAuth()
+    const location = useLocation()
 
     const handleLogout = async () => {
         // signOut now automatically clears candidate data
@@ -45,67 +70,54 @@ function App() {
         return <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>
     }
 
-    // Check if candidate has an active application (anything beyond role selection)
-    const hasApplication = candidateData?.candidateId
-    // Check specific terminal statuses where no further action is needed
-    const rawStatus = candidateData?.rawStatus?.toLowerCase()
-    const isTerminalStatus = ['hired', 'rejected', 'interview'].includes(rawStatus)
-    const isCompleted = candidateData?.status === STATUS?.COMPLETE
+    // Check if we are on the landing page (and user is not logged in)
+    const isLandingPage = location.pathname === '/' && !user
+
+    // Check if we are inside the Dashboard Layout (Employee/Manager pages)
+    // or Admin that we might migrate later. 
+    // For now, these pages handle their own Layout (DashboardLayout).
+    // So we don't need the global nav for them.
+    const isDashboardRoute = location.pathname.startsWith('/employee') || location.pathname.startsWith('/manager')
 
     return (
         <div>
-            <nav>
-                {!user ? (
-                    <>
-                        <Link to="/login">Login</Link>
-                        <Link to="/register">Register</Link>
-                    </>
-                ) : (
-                    <>
-                        {userRole === 'admin' ? (
-                            <>
-                                <Link to="/admin">HR Dashboard</Link>
-                            </>
-                        ) : (
-                            <>
-                                {/* Dashboard link - always visible when there's an application */}
-                                {hasApplication && (
+            {/* Global Nav for Old Applicant Pages / Landing */}
+            {!isLandingPage && !isDashboardRoute && (
+                <nav>
+                    {!user ? (
+                        <>
+                            <Link to="/login">Login</Link>
+                            <Link to="/register">Register</Link>
+                        </>
+                    ) : (
+                        <>
+                            {userRole === 'admin' ? (
+                                <>
+                                    <Link to="/admin">HR Dashboard</Link>
+                                </>
+                            ) : (
+                                <>
                                     <Link to="/applicant/dashboard">My Status</Link>
-                                )}
-
-                                {/* Only show flow tabs if NOT in terminal status */}
-                                {!isTerminalStatus && !isCompleted && (
-                                    <>
-                                        <Link to="/applicant">Apply</Link>
-                                        <Link to="/applicant/upload">Upload</Link>
-                                        <Link to="/applicant/screen">Screening</Link>
-                                        <Link to="/applicant/test">Tests</Link>
-                                    </>
-                                )}
-
-                                {/* Show completed badge */}
-                                {(isTerminalStatus || isCompleted) && (
-                                    <span style={{ color: '#4caf50', fontWeight: 'bold', marginLeft: 10 }}>
-                                        {rawStatus === 'hired' ? '🎉 Hired!' :
-                                            rawStatus === 'interview' ? '🎯 Interview' :
-                                                rawStatus === 'rejected' ? '' : '✓ Complete'}
-                                    </span>
-                                )}
-                            </>
-                        )}
-                        <span style={{ float: 'right' }}>
-                            <span style={{ marginRight: 15, color: '#aaa', fontSize: 12 }}>
-                                {user.email} ({userRole})
+                                    <Link to="/applicant">Apply</Link>
+                                    <Link to="/applicant/upload">Upload</Link>
+                                    {/* Temporary link to access new dashboard for demo */}
+                                    <Link to="/employee" style={{ marginLeft: '20px', color: '#6366f1' }}>Switch to Employee View</Link>
+                                </>
+                            )}
+                            <span style={{ float: 'right' }}>
+                                <span style={{ marginRight: 15, color: '#aaa', fontSize: 12 }}>
+                                    {user.email} ({userRole})
+                                </span>
+                                <button onClick={handleLogout} style={{ padding: '4px 12px', fontSize: 12 }}>
+                                    Logout
+                                </button>
                             </span>
-                            <button onClick={handleLogout} style={{ padding: '4px 12px', fontSize: 12 }}>
-                                Logout
-                            </button>
-                        </span>
-                    </>
-                )}
-            </nav>
+                        </>
+                    )}
+                </nav>
+            )}
 
-            <div className="container">
+            <div className={(isLandingPage || isDashboardRoute) ? '' : "container"}>
                 <Routes>
                     {/* Public routes */}
                     <Route path="/login" element={
@@ -154,12 +166,41 @@ function App() {
                         </ProtectedRoute>
                     } />
 
-                    {/* Default redirect */}
+                    {/* New Employee Routes */}
+                    <Route path="/employee" element={
+                        <ProtectedRoute>
+                            <EmployeeDashboard />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/employee/tasks" element={
+                        <ProtectedRoute>
+                            <EmployeeTasks />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/employee/leave" element={
+                        <ProtectedRoute>
+                            <EmployeeLeave />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/employee/feedback" element={
+                        <ProtectedRoute>
+                            <EmployeeFeedback />
+                        </ProtectedRoute>
+                    } />
+                    {/* Placeholder for settings */}
+                    <Route path="/employee/settings" element={
+                        <ProtectedRoute>
+                            <EmployeeDashboard /> {/* Redirect to dashboard for now */}
+                        </ProtectedRoute>
+                    } />
+
+
+                    {/* Default redirect / Landing Page */}
                     <Route path="/" element={
                         user ? (
                             <Navigate to={userRole === 'admin' ? '/admin' : '/applicant/dashboard'} replace />
                         ) : (
-                            <Navigate to="/login" replace />
+                            <LandingPage />
                         )
                     } />
                     <Route path="*" element={<Navigate to="/" replace />} />

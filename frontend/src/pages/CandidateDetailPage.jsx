@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getAdminCandidateDetails, updateCandidateStatus } from '../api'
+import LoadingSpinner from '../components/ui/LoadingSpinner'
 
 function CandidateDetailPage() {
     const { candidateId } = useParams()
@@ -80,9 +81,10 @@ function CandidateDetailPage() {
 
     if (loading) {
         return (
-            <div>
+            <div style={{ textAlign: 'center', marginTop: 50 }}>
                 <h1>Candidate Details</h1>
-                <p>Loading...</p>
+                <LoadingSpinner />
+                <p style={{ marginTop: 20 }}>Loading candidate data...</p>
             </div>
         )
     }

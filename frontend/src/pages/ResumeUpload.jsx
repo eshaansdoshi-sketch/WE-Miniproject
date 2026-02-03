@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { processResume } from '../api'
+import LoadingSpinner from '../components/ui/LoadingSpinner'
 
 // Helper to map backend status (duplicated for now, should be in utils)
 const mapBackendStatus = (backendStatus, STATUS) => {
@@ -191,7 +192,12 @@ function ResumeUpload() {
                     </button>
                 </div>
 
-                {loading && <p style={{ color: '#666' }}>Analyzing resume with AI...</p>}
+                {loading && (
+                    <div style={{ marginTop: 20 }}>
+                        <LoadingSpinner />
+                        <p style={{ color: '#666', textAlign: 'center', marginTop: 10 }}>Analyzing resume with AI...</p>
+                    </div>
+                )}
                 {error && <p className="error">{error}</p>}
             </div>
         </div>
