@@ -253,26 +253,54 @@ def evaluate_candidate_for_role(candidate_ai_data: dict, job_role: dict) -> dict
         reject_reasons.append(
             f"Resume score ({candidate_resume_score}) is below minimum requirement ({min_resume_score})"
         )
+
+    # ===== Calculate Match Score (Job Fit) =====
+    # Weights:
+    # - Required Skills: 60%
+    # - Experience Fit: 20%
+    # - Preferred Skills: 10%
+    # - Resume Quality: 10%
     
-    # ===== Build Summary =====
-    if qualified:
-        summary_parts = [f"Qualified with {len(matched_required)}/{len(required_skills_raw)} required skills"]
-        if matched_preferred:
-            summary_parts.append(f"{len(matched_preferred)}/{len(preferred_skills_raw)} preferred skills")
-        if experience_gap == 1 and candidate_resume_score >= RESUME_SCORE_EXPERIENCE_FLEXIBILITY:
-            summary_parts.append("strong resume score compensates for minor experience gap")
-        summary = ", ".join(summary_parts) + "."
+    # 1. Required Skills Score (0-100)
+    # Using weighted_score calculated earlier (0.0 to 1.0)
+    req_skill_score = weighted_score * 100
+    
+    # 2. Experience Fit Score (0-100)
+    if experience_gap <= 0:
+        exp_score = 100 # Meets or exceeds
+    elif experience_gap == 1:
+        exp_score = 50  # One level below
     else:
-        summary = " ".join(reject_reasons)
+        exp_score = 0   # Significant gap
+        
+    # 3. Preferred Skills Score (0-100)
+    if len(preferred_skills_raw) > 0:
+        pref_ratio = len(matched_preferred) / len(preferred_skills_raw)
+        pref_score = pref_ratio * 100
+    else:
+        pref_score = 100 # No preferences = full points
+        
+    # 4. Resume Quality Score (0-100)
+    # Already have candidate_resume_score
     
-    # ===== Build Feedback Notes =====
+    # Final Match Score Calculation
+    match_score = (
+        (req_skill_score * 0.6) +
+        (exp_score * 0.2) +
+        (pref_score * 0.1) +
+        (candidate_resume_score * 0.1)
+    )
+    
+    match_score = round(match_score)
+    
     feedback_notes = []
     if missing_preferred:
         feedback_notes.append(f"Consider developing these preferred skills: {', '.join(missing_preferred)}")
     
     return {
         "qualified": qualified,
-        "summary": summary,
+        "match_score": match_score, 
+        "summary": "; ".join(reject_reasons) if reject_reasons else "Candidate meets requirements.",
         "required_skill_match_ratio": round(required_match_ratio, 2),
         "weighted_score": round(weighted_score, 2),
         "candidate_level": candidate_level,
@@ -293,5 +321,5 @@ def evaluate_candidate_for_role(candidate_ai_data: dict, job_role: dict) -> dict
         "matched_skills": matched_required,
         "missing_skills": missing_required,
         "skill_match_ratio": round(required_match_ratio, 2),
-        "feedback": summary,
+        "feedback": "; ".join(reject_reasons) if reject_reasons else "Candidate meets requirements.",
     }

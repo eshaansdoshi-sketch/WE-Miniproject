@@ -31,8 +31,7 @@ const AdminReports = () => {
         required_skills: '',
         preferred_skills: '',
         min_experience_level: 'junior',
-        min_resume_score: 50,
-        time_limit: 30
+        min_resume_score: 50
     });
 
     // Menu Items for Sidebar (Must match AdminDashboard to keep sidebar consistent if not global)
@@ -78,8 +77,7 @@ const AdminReports = () => {
                 required_skills: roleForm.required_skills.split(',').map(s => s.trim()).filter(Boolean),
                 preferred_skills: roleForm.preferred_skills.split(',').map(s => s.trim()).filter(Boolean),
                 min_experience_level: roleForm.min_experience_level,
-                min_resume_score: parseInt(roleForm.min_resume_score),
-                time_limit: parseInt(roleForm.time_limit)
+                min_resume_score: parseInt(roleForm.min_resume_score)
             };
 
             const res = await createJobRole(payload);
@@ -90,8 +88,7 @@ const AdminReports = () => {
                     required_skills: '',
                     preferred_skills: '',
                     min_experience_level: 'junior',
-                    min_resume_score: 50,
-                    time_limit: 30
+                    min_resume_score: 50
                 });
             } else {
                 setError(res.error || 'Failed to create job role');
@@ -296,7 +293,7 @@ const AdminReports = () => {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-bold text-secondary mb-1 block">Experience Level</label>
                                     <select
@@ -315,15 +312,6 @@ const AdminReports = () => {
                                         min="0" max="100"
                                         value={roleForm.min_resume_score}
                                         onChange={(e) => setRoleForm({ ...roleForm, min_resume_score: e.target.value })}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-sm font-bold text-secondary mb-1 block">Time Limit (mins)</label>
-                                    <input
-                                        type="number"
-                                        min="5" max="120"
-                                        value={roleForm.time_limit}
-                                        onChange={(e) => setRoleForm({ ...roleForm, time_limit: e.target.value })}
                                     />
                                 </div>
                             </div>

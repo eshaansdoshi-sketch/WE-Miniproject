@@ -102,6 +102,7 @@ function ApplicantDashboard() {
 
     const menuItems = [
         { label: 'My Status', path: '/applicant/dashboard', icon: LayoutDashboard },
+        { label: 'Upload Resume', path: '/applicant/upload', icon: FileText },
         { label: 'Browse Jobs', path: '/applicant/jobs', icon: Briefcase }, // Placeholder path
         { label: 'My Profile', path: '/applicant/profile', icon: User },    // Placeholder path
     ]

@@ -199,7 +199,7 @@ class JobRoleCreate(BaseModel):
     preferred_skills: list[str] = []
     min_experience_level: str = "junior"  # junior/mid/senior
     min_resume_score: int = 50
-    time_limit: int = 3  # Test time limit in minutes
+    min_resume_score: int = 50
     # Legacy fields for backward compatibility
     skill_weights: dict[str, float] | None = None
     role_level: str | None = None
@@ -218,7 +218,7 @@ class JobRoleUpdate(BaseModel):
     preferred_skills: list[str] | None = None
     min_experience_level: str | None = None
     min_resume_score: int | None = None
-    time_limit: int | None = None
+
 
 class TestAnswer(BaseModel):
     question_id: str
@@ -247,7 +247,7 @@ async def create_task(task: TaskCreate):
     result = await supabase_insert("tasks", data)
     
     if isinstance(result, dict) and result.get("error"):
-        raise HTTPException(status_code=500, detail=str(result.get("error")))
+        raise HTTPException(status_code=500, detail=result.get("details") or "Database error")
     
     # Notify Employee
     notification_msg = f"New Task Assigned: {task.title}"
@@ -296,7 +296,7 @@ async def create_schedule(schedule: ScheduleCreate):
     result = await supabase_insert("schedules", data)
 
     if isinstance(result, dict) and result.get("error"):
-         raise HTTPException(status_code=500, detail=str(result.get("error")))
+         raise HTTPException(status_code=500, detail=result.get("details") or "Database error")
 
     # Notify Employee
     notification_msg = f"New Shift Assigned: {schedule.shift_date} ({schedule.work_type})"
@@ -352,7 +352,7 @@ async def get_profiles(role: Optional[str] = None):
     if isinstance(profiles, dict) and profiles.get("error"):
         # Fallback to empty list
         print(f"[GetProfiles] Error: {profiles}")
-        return {"success": False, "error": profiles}
+        return {"success": False, "error": profiles.get("details") or "Database error"}
         
     return {"success": True, "profiles": profiles}
 
@@ -402,6 +402,17 @@ async def process_resume(
     # ResumeParser expects bytes (PyPDF2 with BytesIO)
     try:
         resume_text = extract_text_from_pdf(file_bytes)
+        
+        # Validation: Check if text extraction worked
+        if not resume_text or len(resume_text.strip()) < 50:
+            print("[ProcessResume] Text extraction result is empty or too short.")
+            raise HTTPException(
+                status_code=400, 
+                detail="Could not extract text from this PDF. Please ensure the resume is text-accessible, not a scanned image/photo."
+            )
+            
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[ProcessResume] Extraction failed: {e}")
         raise HTTPException(status_code=500, detail=f"Text extraction failed: {str(e)}")
@@ -433,7 +444,8 @@ async def process_resume(
         "skills": ai_result.get("skills", []),
         "experience_level": ai_result.get("experience_level", "fresher"),
         "experience_summary": ai_result.get("experience_summary", ""),
-        "resume_score": resume_score,
+        # CRITICAL FIX: Use the calculated Job Fit Match Score, not the generic resume score
+        "resume_score": eval_result.get("match_score", 0), 
         "status": "qualified" if eval_result.get("qualified") else "rejected"
     }
     
@@ -478,7 +490,7 @@ async def create_job_role(job_role: JobRoleCreate):
         "preferred_skills": job_role.preferred_skills,
         "min_experience_level": job_role.min_experience_level,
         "min_resume_score": job_role.min_resume_score,
-        "time_limit": job_role.time_limit,
+        "min_resume_score": job_role.min_resume_score,
     }
     if job_role.skill_weights:
         data["skill_weights"] = job_role.skill_weights
@@ -488,7 +500,8 @@ async def create_job_role(job_role: JobRoleCreate):
     try:
         result = await supabase_insert("job_roles", data)
         if isinstance(result, dict) and result.get("error"):
-            return {"success": False, "error": str(result.get("error"))}
+            # Return 'details' which contains the actual error message, not the boolean 'error' flag
+            return {"success": False, "error": result.get("details") or "Database error"}
         return {"success": True, "job_role_id": result.get("id"), "created": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -505,14 +518,14 @@ async def update_job_role(role_id: str, updates: JobRoleUpdate):
     if updates.preferred_skills is not None: update_data["preferred_skills"] = updates.preferred_skills
     if updates.min_experience_level is not None: update_data["min_experience_level"] = updates.min_experience_level
     if updates.min_resume_score is not None: update_data["min_resume_score"] = updates.min_resume_score
-    if updates.time_limit is not None: update_data["time_limit"] = updates.time_limit
+
 
     if not update_data:
         return {"success": False, "error": "No updates provided"}
 
     result = await supabase_update_by_id("job_roles", role_id, update_data)
     if isinstance(result, dict) and result.get("error"):
-        return {"success": False, "error": result}
+        return {"success": False, "error": result.get("details") or "Database error"}
 
     return {"success": True, "role_id": role_id, "job_role": result}
 
@@ -520,21 +533,21 @@ async def update_job_role(role_id: str, updates: JobRoleUpdate):
 @app.get("/candidates", tags=["Dashboard"])
 async def get_all_candidates():
     data = await supabase_select("candidates")
-    if isinstance(data, dict) and data.get("error"): return {"success": False, "error": data}
+    if isinstance(data, dict) and data.get("error"): return {"success": False, "error": data.get("details") or "Database error"}
     return {"success": True, "count": len(data) if isinstance(data, list) else 0, "candidates": data}
 
 
 @app.get("/job-roles", tags=["Dashboard"])
 async def get_all_job_roles():
     data = await supabase_select("job_roles")
-    if isinstance(data, dict) and data.get("error"): return {"success": False, "error": data}
+    if isinstance(data, dict) and data.get("error"): return {"success": False, "error": data.get("details") or "Database error"}
     return {"success": True, "count": len(data) if isinstance(data, list) else 0, "job_roles": data}
 
 
 @app.get("/evaluations", tags=["Dashboard"])
 async def get_all_evaluations():
     data = await supabase_select("evaluations")
-    if isinstance(data, dict) and data.get("error"): return {"success": False, "error": data}
+    if isinstance(data, dict) and data.get("error"): return {"success": False, "error": data.get("details") or "Database error"}
     return {"success": True, "count": len(data) if isinstance(data, list) else 0, "evaluations": data}
 
 
@@ -604,6 +617,102 @@ async def update_candidate_status(candidate_id: str, update: CandidateStatusUpda
         raise HTTPException(status_code=500, detail="Failed to update")
     
     return {"success": True, "message": f"Updated to {update.status}", "candidate_id": candidate_id}
+
+
+@app.get("/candidate-tests/{candidate_id}/{role_id}", tags=["Candidate"])
+async def get_candidate_tests(candidate_id: str, role_id: str):
+    """
+    Get or generate skill tests for a candidate based on the role.
+    """
+    print(f"[GetCandidateTests] Fetching tests for Candidate={candidate_id}, Role={role_id}")
+    
+    # 1. Check if tests already generated/assigned (in test_attempts)
+    # We use test_attempts to store the "assigned" tests even if not taken yet
+    existing_tests = await supabase_select_where("test_attempts", {"candidate_id": candidate_id})
+    
+    # Filter for this role's tests (if we track role_id in attempts, or just assume all are relevant)
+    # The current schema might not rely on role_id in test_attempts, but we can check.
+    
+    # If we have valid tests that are not just empty records
+    if existing_tests and isinstance(existing_tests, list) and len(existing_tests) > 0:
+        # Check if they look like full tests
+        valid_tests = [t for t in existing_tests if t.get("questions") and len(t.get("questions")) > 0]
+        if valid_tests:
+            print(f"[GetCandidateTests] Found {len(valid_tests)} existing tests")
+            return {
+                "success": True, 
+                "tests": valid_tests
+            }
+
+    # 2. If no tests, GENERATE them
+    print("[GetCandidateTests] No existing tests found. Generating new ones...")
+    
+    # Fetch job role for skills
+    job_role = await supabase_select_by_id("job_roles", role_id)
+    if not job_role or (isinstance(job_role, dict) and job_role.get("error")):
+        return {"success": False, "error": "Job role not found"}
+        
+    required_skills = job_role.get("required_skills", [])
+    if not required_skills:
+        return {"success": False, "error": "No skills defined for this role"}
+        
+    # Generate a test for each skill (limit to top 3 to avoid overload)
+    generated_tests = []
+    
+    # Generate a test for each skill (limit to top 3 to avoid overload)
+    generated_tests = []
+    
+    # Define async helper for parallel execution
+    async def generate_single_test(skill):
+        print(f"[GetCandidateTests] Generating questions for {skill}...")
+        test_id = f"{skill.lower().replace(' ', '_')}_v1"
+        try:
+            questions = await generate_questions_for_test(skill, test_id)
+            if isinstance(questions, list) and len(questions) > 0:
+                test_data = {
+                    "candidate_id": candidate_id,
+                    "test_id": test_id,
+                    "questions": questions,
+                    "status": "assigned",
+                    "score": None,
+                    "submission_time": None
+                }
+                # Save to DB
+                saved_test = await supabase_insert("test_attempts", test_data)
+                
+                # If save successful, return the DB record (has ID)
+                if not (isinstance(saved_test, dict) and saved_test.get("error")):
+                    return saved_test
+                else:
+                    # If save fails (e.g. missing column), LOG IT but RETURN the generated data anyway
+                    # This ensures the user sees the test even if DB schema is outdated
+                    print(f"[GetCandidateTests] WARNING: Failed to save test for {skill} (DB error), but returning AI questions to frontend. Error: {saved_test}")
+                    # Ensure the returned object matches the structure expected by frontend
+                    return test_data
+            return None
+        except Exception as e:
+            print(f"[GetCandidateTests] Error generating test for {skill}: {e}")
+            return None
+
+    # Run all generations in parallel
+    tasks = [generate_single_test(skill) for skill in required_skills[:3]]
+    results = await asyncio.gather(*tasks)
+    
+    # Filter out None results
+    generated_tests = [res for res in results if res]
+
+    # Calculate total questions for logging
+    total_questions = sum(len(t.get('questions', [])) for t in generated_tests)
+    print(f"Generated total questions: {total_questions}")
+
+    if not generated_tests:
+         # Return empty list with error message as requested
+         return {"success": False, "tests": [], "error": "No questions generated"}
+            
+    return {
+        "success": True, 
+        "tests": generated_tests
+    }
 
 
 @app.get("/candidate-feedback/{candidate_id}", tags=["Candidate"])
@@ -713,3 +822,66 @@ async def assign_tests_to_candidate(candidate_id: str, role_id: str):
                 assigned.append({"skill": skill, "test_id": test_id, "generated": True})
     
     return {"success": True, "assigned_tests": assigned}
+
+
+@app.post("/screen-candidate/{candidate_id}/{role_id}", tags=["Resume Processing"])
+async def screen_candidate(candidate_id: str, role_id: str):
+    """
+    Manually trigger screening for an existing candidate.
+    Useful if screening failed or for re-evaluation.
+    """
+    print(f"[ScreenCandidate] Screening Candidate={candidate_id} for Role={role_id}")
+    
+    # 1. Fetch Candidate
+    candidate = await supabase_select_by_id("candidates", candidate_id)
+    if not candidate or (isinstance(candidate, dict) and candidate.get("error")):
+        raise HTTPException(status_code=404, detail="Candidate not found")
+        
+    # 2. Fetch Job Role
+    job_role = await supabase_select_by_id("job_roles", role_id)
+    if not job_role or (isinstance(job_role, dict) and job_role.get("error")):
+        raise HTTPException(status_code=404, detail="Job role not found")
+        
+    # 3. Create Evaluation Input
+    # Match qualification_engine input requirements
+    eval_input = {
+        "skills": candidate.get("skills", []),
+        "experience_level": candidate.get("experience_level", "fresher"),
+        "resume_score": candidate.get("resume_score", 0),
+        "experience_summary": candidate.get("experience_summary", "")
+    }
+    
+    # 4. Run Evaluation
+    eval_result = evaluate_candidate_for_role(eval_input, job_role)
+    
+    # 5. Update Candidate Status
+    status = "qualified" if eval_result.get("qualified") else "rejected"
+    match_score = eval_result.get("match_score", 0)
+    
+    update_data = {
+        "status": status,
+        "role_id": role_id,
+        "resume_score": match_score 
+    }
+    
+    print(f"[ScreenCandidate] Updating status to {status}, score={match_score}")
+    update_res = await supabase_update_by_id("candidates", candidate_id, update_data)
+    
+    # 6. Save Evaluation Record
+    eval_db_data = {
+        "candidate_id": candidate_id,
+        "role_id": role_id,
+        "qualified": eval_result.get("qualified"),
+        "matched_skills": eval_result.get("details", {}).get("matched_required_skills", []),
+        "missing_skills": eval_result.get("details", {}).get("missing_required_skills", []),
+        "feedback": eval_result.get("summary")
+    }
+    await save_evaluation(eval_db_data)
+    
+    return {
+        "success": True,
+        "qualified": eval_result.get("qualified"),
+        "feedback": eval_result.get("summary"),
+        "match_score": match_score,
+        "details": eval_result.get("details")
+    }

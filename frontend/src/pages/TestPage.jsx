@@ -203,64 +203,164 @@ function TestPage() {
 
     // Show questions
     const currentTest = tests[currentTestIndex]
-    const answeredCount = currentTest.questions.filter(q => answers[q.question_id]).length
+    const answeredCount = currentTest.questions.filter((q, i) => answers[q.question_id || `q_${i}`]).length
     const totalQuestions = currentTest.questions.length
 
     return (
-        <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h1>Test: {currentTest.test_id.replace(/_/g, ' ').replace('v1', '')}</h1>
+        <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '30px'
+            }}>
+                <div>
+                    <h1 style={{ margin: 0, fontSize: '1.8rem', color: '#1e293b' }}>
+                        {currentTest.test_id.replace(/_/g, ' ').replace('v1', '')}
+                    </h1>
+                    <p style={{ margin: '5px 0 0', color: '#64748b' }}>
+                        Test {currentTestIndex + 1} of {tests.length}
+                    </p>
+                </div>
                 {timeLeft !== null && (
                     <div style={{
-                        fontSize: '1.2rem',
-                        fontWeight: 'bold',
-                        color: timeLeft < 60 ? 'red' : '#333',
-                        background: '#f5f5f5',
-                        padding: '5px 15px',
-                        borderRadius: 20
+                        fontSize: '1.1rem',
+                        fontWeight: '600',
+                        color: timeLeft < 60 ? '#ef4444' : '#0f172a',
+                        background: timeLeft < 60 ? '#fee2e2' : '#f1f5f9',
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                     }}>
-                        ⏱ {formatTime(timeLeft)}
+                        <span>⏱</span> {formatTime(timeLeft)}
                     </div>
                 )}
             </div>
 
-            <div style={{ padding: 10, background: '#f0f0f0', borderRadius: 4, marginBottom: 20 }}>
-                Test {currentTestIndex + 1}/{tests.length} | {answeredCount}/{totalQuestions} answered
+            {/* Progress Bar */}
+            <div style={{ marginBottom: '30px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.875rem', fontWeight: '500', color: '#64748b' }}>
+                    <span>Progress</span>
+                    <span>{Math.round((answeredCount / totalQuestions) * 100)}%</span>
+                </div>
+                <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{
+                        width: `${(answeredCount / totalQuestions) * 100}%`,
+                        height: '100%',
+                        background: 'linear-gradient(90deg, #4f46e5 0%, #8b5cf6 100%)',
+                        transition: 'width 0.3s ease'
+                    }} />
+                </div>
             </div>
 
-            {currentTest.questions.map((q, i) => (
-                <div key={q.question_id} className="question">
-                    <h4>Q{i + 1}: {q.question_text}</h4>
-                    {q.options.map((option, j) => (
-                        <label key={j} className="option">
-                            <input
-                                type="radio"
-                                name={q.question_id}
-                                checked={answers[q.question_id] === option}
-                                onChange={() => handleAnswerChange(q.question_id, option)}
-                            />
-                            {' '}{option}
-                        </label>
-                    ))}
+            {/* Questions List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {currentTest.questions.map((q, i) => {
+                    // Fallback to index if question_id is missing or duplicate
+                    const safeId = q.question_id || `q_${i}`;
+
+                    return (
+                        <div key={safeId} className="card" style={{
+                            padding: '24px',
+                            borderRadius: '16px',
+                            border: '1px solid #e2e8f0',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                            background: '#ffffff'
+                        }}>
+                            <h4 style={{
+                                margin: '0 0 16px',
+                                fontSize: '1.1rem',
+                                color: '#1e293b',
+                                lineHeight: '1.5'
+                            }}>
+                                <span style={{ color: '#8b5cf6', marginRight: '8px' }}>{i + 1}.</span>
+                                {q.question_text}
+                            </h4>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {q.options.map((option, j) => {
+                                    const isSelected = answers[safeId] === option;
+                                    return (
+                                        <label
+                                            key={j}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                padding: '12px 16px',
+                                                borderRadius: '8px',
+                                                border: `2px solid ${isSelected ? '#8b5cf6' : '#e2e8f0'}`,
+                                                background: isSelected ? '#f5f3ff' : '#ffffff',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (!isSelected) e.currentTarget.style.borderColor = '#cbd5e1';
+                                                e.currentTarget.style.background = isSelected ? '#f5f3ff' : '#f8fafc';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (!isSelected) e.currentTarget.style.borderColor = '#e2e8f0';
+                                                e.currentTarget.style.background = isSelected ? '#f5f3ff' : '#ffffff';
+                                            }}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name={`${currentTest.test_id}_q_${i}`} // Unique name per question
+                                                checked={isSelected}
+                                                onChange={() => handleAnswerChange(safeId, option)}
+                                                style={{
+                                                    width: '18px',
+                                                    height: '18px',
+                                                    accentColor: '#8b5cf6',
+                                                    marginRight: '12px'
+                                                }}
+                                            />
+                                            <span style={{ color: isSelected ? '#4c1d95' : '#475569', fontWeight: isSelected ? '500' : '400' }}>
+                                                {option}
+                                            </span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Footer / Actions */}
+            <div style={{ marginTop: '40px', padding: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ color: '#64748b', fontSize: '0.9rem' }}>
+                    {answeredCount < totalQuestions ? (
+                        <span>⚠ {totalQuestions - answeredCount} questions remaining</span>
+                    ) : (
+                        <span style={{ color: '#10b981', fontWeight: '500' }}>✓ All questions answered</span>
+                    )}
                 </div>
-            ))}
 
-            <button
-                onClick={submitCurrentTest}
-                disabled={answeredCount < totalQuestions || submitting}
-                style={{ padding: '12px 30px', marginTop: 20 }}
-            >
-                {submitting ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <span style={{ marginBottom: 10 }}>Submitting...</span>
-                        <LoadingSpinner />
-                    </div>
-                ) : 'Submit'}
-            </button>
-
-            {answeredCount < totalQuestions && (
-                <p style={{ color: '#666', marginTop: 10 }}>{totalQuestions - answeredCount} questions remaining</p>
-            )}
+                <button
+                    onClick={() => submitCurrentTest()}
+                    disabled={answeredCount < totalQuestions || submitting}
+                    className="btn-primary" // Assuming global class exists, or use style
+                    style={{
+                        padding: '12px 32px',
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        background: answeredCount < totalQuestions ? '#94a3b8' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: answeredCount < totalQuestions || submitting ? 'not-allowed' : 'pointer',
+                        boxShadow: answeredCount < totalQuestions ? 'none' : '0 4px 6px -1px rgba(99, 102, 241, 0.4)',
+                        opacity: submitting ? 0.8 : 1
+                    }}
+                >
+                    {submitting ? 'Submitting...' : (
+                        currentTestIndex >= tests.length - 1 ? 'Finish Assessment' : 'Next Section →'
+                    )}
+                </button>
+            </div>
         </div>
     )
 }

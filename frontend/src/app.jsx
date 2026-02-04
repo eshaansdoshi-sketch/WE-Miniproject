@@ -39,7 +39,7 @@ function ProtectedRoute({ children, requiredRole }) {
     // Role Validation Logic
     if (requiredRole) {
         // Strict check for admin
-        if (requiredRole === 'admin' && userRole !== 'admin') {
+        if (requiredRole === 'admin' && userRole !== 'admin' && userRole !== 'hr_admin') {
             return <Navigate to="/applicant" replace />
         }
     }
@@ -63,49 +63,38 @@ function App() {
     // Check if we are on the landing page (and user is not logged in)
     const isLandingPage = location.pathname === '/' && !user
 
-    // Check if we are inside the Dashboard Layout (Employee/Manager pages)
-    // or Admin that we might migrate later. 
-    // For now, these pages handle their own Layout (DashboardLayout).
-    // So we don't need the global nav for them.
-    const isDashboardRoute = location.pathname.startsWith('/employee') || location.pathname.startsWith('/manager') || location.pathname.startsWith('/admin')
+    // Check if we are inside the Dashboard Layout (Employee/Manager/Admin/Applicant pages)
+    // These pages handle their own Layout (DashboardLayout).
+    const isDashboardRoute = location.pathname.startsWith('/employee') ||
+        location.pathname.startsWith('/manager') ||
+        location.pathname.startsWith('/admin') ||
+        location.pathname.startsWith('/applicant')
 
     return (
         <div>
-            {/* Global Nav for Old Applicant Pages / Landing */}
-            {!isLandingPage && !isDashboardRoute && (
+            {/* Global Nav only for public pages (Login/Register) */}
+            {!isLandingPage && !isDashboardRoute && !user && (
                 <nav>
-                    {!user ? (
-                        <>
-                            <Link to="/login">Login</Link>
-                            <Link to="/register">Register</Link>
-                        </>
-                    ) : (
-                        <>
-                            {userRole === 'admin' ? (
-                                <>
-                                    <Link to="/admin">HR Dashboard</Link>
-                                </>
-                            ) : (
-                                <>
-                                    <Link to="/applicant/dashboard">My Status</Link>
-                                    <Link to="/applicant">Apply</Link>
-                                    <Link to="/applicant/upload">Upload</Link>
-                                    {/* Temporary link to access new dashboard for demo */}
-                                    <Link to="/employee" style={{ marginLeft: '20px', color: '#6366f1' }}>Switch to Employee View</Link>
-                                </>
-                            )}
-                            <span style={{ float: 'right' }}>
-                                <span style={{ marginRight: 15, color: '#aaa', fontSize: 12 }}>
-                                    {user.email} ({userRole})
-                                </span>
-                                <button onClick={handleLogout} style={{ padding: '4px 12px', fontSize: 12 }}>
-                                    Logout
-                                </button>
-                            </span>
-                        </>
-                    )}
+                    <Link to="/login">Login</Link>
+                    <Link to="/register">Register</Link>
                 </nav>
             )}
+
+            {/* Admin logout fallback if not in dashboard (rare case) */}
+            {!isLandingPage && !isDashboardRoute && userRole === 'admin' && (
+                <nav>
+                    <Link to="/admin">HR Dashboard</Link>
+                    <span style={{ float: 'right' }}>
+                        <span style={{ marginRight: 15, color: '#aaa', fontSize: 12 }}>
+                            {user.email} ({userRole})
+                        </span>
+                        <button onClick={handleLogout} style={{ padding: '4px 12px', fontSize: 12 }}>
+                            Logout
+                        </button>
+                    </span>
+                </nav>
+            )}
+
 
             <div className={(isLandingPage || isDashboardRoute) ? '' : "container"}>
                 <Routes>
@@ -252,7 +241,7 @@ function App() {
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </div>
-        </div>
+        </div >
     )
 }
 

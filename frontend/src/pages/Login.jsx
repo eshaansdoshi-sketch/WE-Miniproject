@@ -69,6 +69,7 @@ const Login = () => {
             // 3. Navigate based on DB Role (Source of Truth)
             switch (actualRole) {
                 case 'admin':
+                case 'hr_admin': // Handle potential alternative role name
                     navigate('/admin')
                     break
                 case 'manager':
@@ -92,6 +93,8 @@ const Login = () => {
                     }
                     break
                 default:
+                    // If role is unknown, default to applicant if it looks like one, or dashboard
+                    console.warn('Unknown role:', actualRole)
                     navigate('/applicant/dashboard')
                     break
             }

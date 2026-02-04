@@ -122,7 +122,7 @@ export async function screenCandidate(candidateId, roleId) {
 }
 
 export async function getCandidateTests(candidateId, roleId) {
-    const response = await fetchWithTimeout(`${API_BASE}/candidate-tests/${candidateId}/${roleId}`, {}, 15000);
+    const response = await fetchWithTimeout(`${API_BASE}/candidate-tests/${candidateId}/${roleId}`, {}, 120000); // 120s timeout for generation
     return response.json();
 }
 
