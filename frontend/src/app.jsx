@@ -6,6 +6,8 @@ import ResumeUpload from './pages/ResumeUpload'
 import Screening from './pages/Screening'
 import TestPage from './pages/TestPage'
 import AdminDashboard from './pages/AdminDashboard'
+import AdminReports from './pages/AdminReports'
+import AdminTasks from './pages/admin/AdminTasks' // New
 import CandidateDetailPage from './pages/CandidateDetailPage'
 import Apply from './pages/Apply'
 import ApplicantDashboard from './pages/ApplicantDashboard'
@@ -14,8 +16,13 @@ import LandingPage from './pages/LandingPage'
 // Employee Pages
 import EmployeeDashboard from './pages/employee/EmployeeDashboard'
 import EmployeeTasks from './pages/employee/EmployeeTasks'
+import EmployeeSchedule from './pages/employee/EmployeeSchedule' // New
 import EmployeeLeave from './pages/employee/EmployeeLeave'
 import EmployeeFeedback from './pages/employee/EmployeeFeedback'
+
+// Manager Pages
+import ManagerDashboard from './pages/manager/ManagerDashboard'
+import ManagerSchedule from './pages/manager/ManagerSchedule' // New
 
 // Protected route wrapper - with completed status guard for applicants
 function ProtectedRoute({ children, requiredRole }) {
@@ -35,23 +42,6 @@ function ProtectedRoute({ children, requiredRole }) {
         if (requiredRole === 'admin' && userRole !== 'admin') {
             return <Navigate to="/applicant" replace />
         }
-
-        // For employee/manager routes, we might ideally check userRole, 
-        // but for this demo/recreation we allow mapped roles if needed. 
-        // Assuming 'applicant' might act as employee if they navigate there for now, 
-        // or we strictly enforce it. 
-        // For simplicity: If required is 'employee', but role is 'applicant', we might BLOCK it 
-        // unless we updated the backend to actually have 'employee' roles.
-        // Let's assume the user is "promoted" or we are just showing the view.
-
-        // Current Backend only supports: 'admin' and 'applicant'.
-        // So 'Employee' and 'Manager' must map to one of these or be open.
-
-        // Strategy: 
-        // If route requires 'admin', strictly check 'admin'.
-        // If route requires 'applicant', anyone can technically view if logged in (usually).
-        // Since 'Employee' is a new concept on Frontend, we will allow 'applicant' role to view it 
-        // IF they are navigating there (handled by Login redirect).
     }
 
     return children
@@ -77,7 +67,7 @@ function App() {
     // or Admin that we might migrate later. 
     // For now, these pages handle their own Layout (DashboardLayout).
     // So we don't need the global nav for them.
-    const isDashboardRoute = location.pathname.startsWith('/employee') || location.pathname.startsWith('/manager')
+    const isDashboardRoute = location.pathname.startsWith('/employee') || location.pathname.startsWith('/manager') || location.pathname.startsWith('/admin')
 
     return (
         <div>
@@ -133,6 +123,16 @@ function App() {
                             <AdminDashboard />
                         </ProtectedRoute>
                     } />
+                    <Route path="/admin/reports" element={
+                        <ProtectedRoute requiredRole="admin">
+                            <AdminReports />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/tasks" element={
+                        <ProtectedRoute requiredRole="admin">
+                            <AdminTasks />
+                        </ProtectedRoute>
+                    } />
                     <Route path="/admin/candidate/:candidateId" element={
                         <ProtectedRoute requiredRole="admin">
                             <CandidateDetailPage />
@@ -177,6 +177,11 @@ function App() {
                             <EmployeeTasks />
                         </ProtectedRoute>
                     } />
+                    <Route path="/employee/schedule" element={
+                        <ProtectedRoute>
+                            <EmployeeSchedule />
+                        </ProtectedRoute>
+                    } />
                     <Route path="/employee/leave" element={
                         <ProtectedRoute>
                             <EmployeeLeave />
@@ -194,6 +199,47 @@ function App() {
                         </ProtectedRoute>
                     } />
 
+                    {/* Manager Routes */}
+                    <Route path="/manager" element={
+                        <ProtectedRoute>
+                            <ManagerDashboard />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/manager/schedule" element={
+                        <ProtectedRoute>
+                            <ManagerSchedule />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/manager/calendar" element={
+                        <ProtectedRoute>
+                            <ManagerDashboard />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/manager/leave-requests" element={
+                        <ProtectedRoute>
+                            <ManagerDashboard />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/manager/team-gigs" element={
+                        <ProtectedRoute>
+                            <ManagerDashboard />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/manager/employees" element={
+                        <ProtectedRoute>
+                            <ManagerDashboard />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/manager/reports" element={
+                        <ProtectedRoute>
+                            <ManagerDashboard />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/manager/settings" element={
+                        <ProtectedRoute>
+                            <ManagerDashboard />
+                        </ProtectedRoute>
+                    } />
 
                     {/* Default redirect / Landing Page */}
                     <Route path="/" element={

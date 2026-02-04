@@ -1,261 +1,192 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { getJobRoles, createJobRole, getHRCandidateSummary } from '../api'
+import React from 'react';
+import DashboardLayout from '../components/layout/DashboardLayout';
+import {
+    LayoutDashboard,
+    Calendar,
+    FileText,
+    Briefcase,
+    Users,
+    Shield,
+    BarChart2,
+    Settings,
+    MoreVertical,
+    Check,
+    X,
+    Activity
+} from 'lucide-react';
 
-function AdminDashboard() {
-    const [roles, setRoles] = useState([])
-    const [candidates, setCandidates] = useState([])
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState(null)
-    const [success, setSuccess] = useState(null)
+const AdminDashboard = () => {
+    const menuItems = [
+        { label: 'Dashboard', path: '/admin', icon: LayoutDashboard },
+        { label: 'Tasks & Schedule', path: '/admin/tasks', icon: Calendar },
+        { label: 'Leave Policies', path: '/admin/policies', icon: FileText },
+        { label: 'Gigs Management', path: '/admin/gigs', icon: Briefcase },
+        { label: 'User Management', path: '/admin/users', icon: Users },
+        { label: 'Roles & Permissions', path: '/admin/roles', icon: Shield },
+        { label: 'Reports', path: '/admin/reports', icon: BarChart2 },
+        { label: 'System Settings', path: '/admin/settings', icon: Settings },
+    ];
 
-    // Form state
-    const [formData, setFormData] = useState({
-        role_name: '',
-        required_skills: '',
-        preferred_skills: '',
-        min_experience_level: 'junior',
-        min_resume_score: 50,
-    })
+    const adminStats = [
+        { label: 'Total Employees', value: '1,248', sub: '+12% from last month', color: '#8b5cf6', icon: Users },
+        { label: 'Active Managers', value: '42', sub: '98% Active', color: '#10b981', icon: Shield },
+        { label: 'Open Gigs', value: '18', sub: '4 Critical High Priority', color: '#f59e0b', icon: Briefcase },
+        { label: 'System Load', value: '24%', sub: 'All systems operational', color: '#3b82f6', icon: Activity },
+    ];
 
-    useEffect(() => {
-        loadRoles()
-        loadCandidates()
-    }, [])
+    const approvalRequests = [
+        { id: 1, user: 'Sarah Connor', type: 'Role Change', from: 'Employee', to: 'Manager', date: '2 mins ago' },
+        { id: 2, user: 'Kyle Reese', type: 'Access Request', from: 'None', to: 'Finance System', date: '1 hour ago' },
+        { id: 3, user: 'John Doe', type: 'Account Reactivation', from: 'Inactive', to: 'Active', date: '4 hours ago' },
+    ];
 
-    const loadRoles = async () => {
-        try {
-            const data = await getJobRoles()
-            if (data.success) {
-                setRoles(data.job_roles || [])
-            }
-        } catch (err) {
-            console.error('Failed to load roles:', err)
-        }
-    }
-
-    const loadCandidates = async () => {
-        try {
-            const data = await getHRCandidateSummary()
-            if (data.success) {
-                setCandidates(data.candidates || [])
-            }
-        } catch (err) {
-            console.error('Failed to load candidates:', err)
-        }
-    }
-
-    const handleInputChange = (e) => {
-        const { name, value } = e.target
-        setFormData(prev => ({ ...prev, [name]: value }))
-    }
-
-    const handleSubmit = async (e) => {
-        e.preventDefault()
-        setLoading(true)
-        setError(null)
-        setSuccess(null)
-
-        // Parse skills from comma-separated string
-        const requiredSkills = formData.required_skills
-            .split(',')
-            .map(s => s.trim())
-            .filter(s => s)
-
-        const preferredSkills = formData.preferred_skills
-            .split(',')
-            .map(s => s.trim())
-            .filter(s => s)
-
-        const payload = {
-            role_name: formData.role_name,
-            required_skills: requiredSkills,
-            preferred_skills: preferredSkills,
-            min_experience_level: formData.min_experience_level,
-            min_resume_score: parseInt(formData.min_resume_score),
-        }
-
-        try {
-            const data = await createJobRole(payload)
-
-            if (data.success) {
-                setSuccess('Job role created successfully!')
-                setFormData({
-                    role_name: '',
-                    required_skills: '',
-                    preferred_skills: '',
-                    min_experience_level: 'junior',
-                    min_resume_score: 50,
-                })
-                loadRoles()
-            } else {
-                setError(data.error || data.message || 'Failed to create role')
-            }
-        } catch (err) {
-            setError('Failed to create role: ' + err.message)
-        } finally {
-            setLoading(false)
-        }
-    }
+    const systemLogs = [
+        { id: 101, action: 'Policy Updated', user: 'Admin User', time: '10:30 AM', status: 'Success' },
+        { id: 102, action: 'Backup Created', user: 'System', time: '02:00 AM', status: 'Success' },
+        { id: 103, action: 'Failed Login', user: 'Unknown IP', time: 'Yesterday', status: 'Warning' },
+    ];
 
     return (
-        <div>
-            <h1>Admin Dashboard</h1>
-
-            {/* Create Job Role Form */}
-            <div style={{ padding: 20, background: '#f5f5f5', borderRadius: 8, marginBottom: 30 }}>
-                <h2>Create Job Role</h2>
-
-                <form onSubmit={handleSubmit}>
-                    <div style={{ marginBottom: 15 }}>
-                        <label><strong>Role Name:</strong></label><br />
-                        <input
-                            type="text"
-                            name="role_name"
-                            value={formData.role_name}
-                            onChange={handleInputChange}
-                            placeholder="e.g., Backend Developer"
-                            required
-                            style={{ width: '100%', maxWidth: 400, padding: 10 }}
-                        />
-                    </div>
-
-                    <div style={{ marginBottom: 15 }}>
-                        <label><strong>Required Skills:</strong> (comma-separated)</label><br />
-                        <input
-                            type="text"
-                            name="required_skills"
-                            value={formData.required_skills}
-                            onChange={handleInputChange}
-                            placeholder="e.g., Python, FastAPI, PostgreSQL"
-                            required
-                            style={{ width: '100%', maxWidth: 400, padding: 10 }}
-                        />
-                    </div>
-
-                    <div style={{ marginBottom: 15 }}>
-                        <label><strong>Preferred Skills:</strong> (comma-separated)</label><br />
-                        <input
-                            type="text"
-                            name="preferred_skills"
-                            value={formData.preferred_skills}
-                            onChange={handleInputChange}
-                            placeholder="e.g., Docker, AWS, Redis"
-                            style={{ width: '100%', maxWidth: 400, padding: 10 }}
-                        />
-                    </div>
-
-                    <div style={{ marginBottom: 15 }}>
-                        <label><strong>Minimum Experience Level:</strong></label><br />
-                        <select
-                            name="min_experience_level"
-                            value={formData.min_experience_level}
-                            onChange={handleInputChange}
-                            style={{ padding: 10, width: 200 }}
-                        >
-                            <option value="junior">Junior</option>
-                            <option value="mid">Mid-level</option>
-                            <option value="senior">Senior</option>
-                        </select>
-                    </div>
-
-                    <div style={{ marginBottom: 15 }}>
-                        <label><strong>Minimum Resume Score:</strong></label><br />
-                        <input
-                            type="number"
-                            name="min_resume_score"
-                            value={formData.min_resume_score}
-                            onChange={handleInputChange}
-                            min="0"
-                            max="100"
-                            style={{ padding: 10, width: 100 }}
-                        />
-                    </div>
-
-                    <button type="submit" disabled={loading} style={{ padding: '10px 30px' }}>
-                        {loading ? 'Creating...' : 'Create Role'}
-                    </button>
-                </form>
-
-                {error && <p className="error" style={{ marginTop: 15 }}>{error}</p>}
-                {success && <p className="success" style={{ marginTop: 15 }}>{success}</p>}
+        <DashboardLayout
+            title="Admin Overview"
+            subtitle="System status, user management, and platform analytics."
+            menuItems={menuItems}
+            sidebarTitle="Admin Console"
+        >
+            {/* Platform Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" style={{ marginBottom: '2rem' }}>
+                {adminStats.map((stat, index) => {
+                    const Icon = stat.icon;
+                    return (
+                        <div key={index} className="card stat-card">
+                            <div className="flex justify-between items-start mb-4">
+                                <div style={{
+                                    padding: '10px',
+                                    borderRadius: '10px',
+                                    background: `${stat.color}15`,
+                                    color: stat.color
+                                }}>
+                                    <Icon size={20} />
+                                </div>
+                                {index === 0 && <span className="badge badge-green text-xs">+12%</span>}
+                            </div>
+                            <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                {stat.value}
+                            </div>
+                            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                                {stat.label}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                {stat.sub}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
 
-            {/* Existing Roles */}
-            <div style={{ marginBottom: 30 }}>
-                <h2>Existing Job Roles</h2>
-                {roles.length === 0 ? (
-                    <p style={{ color: '#666' }}>No job roles created yet.</p>
-                ) : (
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Role Name</th>
-                                <th>Level</th>
-                                <th>Required Skills</th>
-                                <th>Min Score</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {roles.map(role => (
-                                <tr key={role.id}>
-                                    <td><strong>{role.role_name}</strong></td>
-                                    <td>{role.role_level || role.min_experience_level}</td>
-                                    <td style={{ fontSize: 12 }}>
-                                        {Array.isArray(role.required_skills)
-                                            ? role.required_skills.join(', ')
-                                            : JSON.stringify(role.required_skills)}
-                                    </td>
-                                    <td>{role.min_resume_score || '-'}</td>
-                                </tr>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Main Chart / Activity Area (Left Large) */}
+                <div className="lg:col-span-2 flex flex-col gap-6">
+                    {/* Hiring / Engagement Graph Mockup */}
+                    <div className="card">
+                        <div className="section-header">
+                            <h3>Hiring & Engagement Metrics</h3>
+                            <select style={{ width: 'auto' }}>
+                                <option>Last 30 Days</option>
+                                <option>Q1 2026</option>
+                            </select>
+                        </div>
+                        <div style={{
+                            height: '300px',
+                            display: 'flex',
+                            alignItems: 'flex-end',
+                            justifyContent: 'space-between',
+                            padding: '20px 0',
+                            borderBottom: '1px solid var(--border-light)'
+                        }}>
+                            {/* Fake bars for visualization */}
+                            {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
+                                <div key={i} style={{
+                                    width: '8%',
+                                    height: `${h}%`,
+                                    background: i % 2 === 0 ? 'var(--primary-light)' : 'var(--primary-purple)',
+                                    borderRadius: '8px 8px 0 0',
+                                    opacity: 0.8
+                                }} />
                             ))}
-                        </tbody>
-                    </table>
-                )}
-            </div>
+                        </div>
+                        <div className="flex justify-between mt-4 text-sm text-secondary">
+                            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                        </div>
+                    </div>
 
-            {/* Candidates Summary */}
-            <div>
-                <h2>Candidates Overview</h2>
-                <button onClick={loadCandidates} style={{ marginBottom: 15 }}>Refresh</button>
-
-                {candidates.length === 0 ? (
-                    <p style={{ color: '#666' }}>No candidates yet.</p>
-                ) : (
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Resume Score</th>
-                                <th>Qualified</th>
-                                <th>Test Score</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {candidates.map(c => (
-                                <tr key={c.candidate_id}>
-                                    <td style={{ fontSize: 11 }}>{c.candidate_id?.slice(0, 8)}...</td>
-                                    <td>{c.resume_score}</td>
-                                    <td>{c.qualified ? '✓' : '✗'}</td>
-                                    <td>{c.avg_test_score ?? '-'}</td>
-                                    <td className={`status-${c.status?.toLowerCase()}`}>
-                                        <strong>{c.status}</strong>
-                                    </td>
-                                    <td>
-                                        <Link to={`/admin/candidate/${c.candidate_id}`}>
-                                            View Details
-                                        </Link>
-                                    </td>
+                    {/* System Logs */}
+                    <div className="card">
+                        <div className="section-header">
+                            <h3>Recent Activity Logs</h3>
+                            <button className="btn btn-secondary text-sm">Export Log</button>
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid var(--border-light)', textAlign: 'left' }}>
+                                    <th className="pb-3 text-sm font-bold text-muted">Action</th>
+                                    <th className="pb-3 text-sm font-bold text-muted">User/System</th>
+                                    <th className="pb-3 text-sm font-bold text-muted">Time</th>
+                                    <th className="pb-3 text-sm font-bold text-muted text-right">Status</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </div>
-        </div>
-    )
-}
+                            </thead>
+                            <tbody>
+                                {systemLogs.map((log) => (
+                                    <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                        <td className="py-3 text-sm font-bold">{log.action}</td>
+                                        <td className="py-3 text-sm text-secondary">{log.user}</td>
+                                        <td className="py-3 text-sm text-secondary">{log.time}</td>
+                                        <td className="py-3 text-right">
+                                            <span className={`badge ${log.status === 'Success' ? 'badge-green' : 'badge-orange'}`}>
+                                                {log.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-export default AdminDashboard
+                {/* Right Column: Approvals */}
+                <div className="lg:col-span-1">
+                    <div className="card">
+                        <div className="section-header">
+                            <h3>Pending Approvals</h3>
+                            <span className="badge badge-purple">3 New</span>
+                        </div>
+                        <div className="flex flex-col gap-4">
+                            {approvalRequests.map((req) => (
+                                <div key={req.id} style={{ border: '1px solid var(--border-light)', borderRadius: '12px', padding: '16px' }}>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <span className="text-sm font-bold">{req.user}</span>
+                                        <span className="text-xs text-muted">{req.date}</span>
+                                    </div>
+                                    <div className="text-sm text-secondary mb-3">
+                                        Requests <span className="text-primary font-bold">{req.type}</span> from {req.from} to {req.to}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button className="btn btn-primary" style={{ flex: 1, padding: '8px' }}>
+                                            <Check size={16} /> Approve
+                                        </button>
+                                        <button className="btn btn-secondary" style={{ padding: '8px' }}>
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <button className="btn btn-secondary w-100 mt-4" style={{ width: '100%' }}>View All Requests</button>
+                    </div>
+                </div>
+            </div>
+        </DashboardLayout>
+    );
+};
+
+export default AdminDashboard;

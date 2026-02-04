@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { LogIn, Sparkles, Shield, Brain, Users } from 'lucide-react'
 import { useAuth } from '../AuthContext'
 import { supabase } from '../supabaseClient'
@@ -45,11 +45,6 @@ const Login = () => {
     const handleLogin = async (e) => {
         e.preventDefault()
 
-        if (!selectedRole) {
-            setError('Please select your role')
-            return
-        }
-
         setLoading(true)
         setError(null)
 
@@ -61,51 +56,44 @@ const Login = () => {
             if (!data?.user?.id) throw new Error('Login failed')
 
             // 2. Fetch actual role from DB
-            const { data: roleData } = await supabase
+            const { data: roleData, error: roleError } = await supabase
                 .from('user_roles')
                 .select('role')
                 .eq('user_id', data.user.id)
                 .single()
 
+            // Default to applicant if no role found (or error)
             const actualRole = roleData?.role || 'applicant'
-            console.log('Actual Role:', actualRole, 'Selected:', selectedRole)
+            console.log('Login successful. DB Role:', actualRole)
 
-            // 3. Validate Role Selection
-            // Mapping Logic:
-            // 'hr_admin' (UI) -> 'admin' (DB)
-            // 'manager' (UI) -> 'admin' (DB) (Assuming Manager shares Admin role for now)
-            // 'employee' (UI) -> 'applicant' (DB) (Assuming Employee uses Applicant/Standard role)
+            // 3. Navigate based on DB Role (Source of Truth)
+            switch (actualRole) {
+                case 'admin':
+                    navigate('/admin')
+                    break
+                case 'manager':
+                    navigate('/manager')
+                    break
+                case 'employee':
+                    navigate('/employee')
+                    break
+                case 'applicant':
+                    // Check if candidate has already applied
+                    const { data: candidate } = await supabase
+                        .from('candidates')
+                        .select('id, role_id')
+                        .eq('user_id', data.user.id)
+                        .maybeSingle()
 
-            let isValid = false
-            if (actualRole === 'admin') {
-                if (selectedRole === 'hr_admin' || selectedRole === 'manager') isValid = true
-            } else if (actualRole === 'applicant') {
-                // Allow applicant to log in as employee for demo purposes
-                // In a real app, 'Employee' would be a distinct DB role
-                if (selectedRole === 'employee') isValid = true
-            }
-
-            // Fallback for demo: If they pick a role that doesn't strictly match but they are authenticated, 
-            // you might want to block or warn. 
-            // For this recreation, let's enforce based on the mapping above.
-            if (!isValid) {
-                // For easier testing/demo, you might relax this, but strict mode:
-                // throw new Error(`Role mismatch. You are registered as ${actualRole}.`)
-
-                // Relaxed Mode for User Objective "Recreate Frontend":
-                // Just warn/log and proceed to determining where they go based on their ACTUAL role/selection combination.
-                // Actually, let's allow it but redirect to the correct place for their DB role to avoid broken pages.
-            }
-
-            // 4. Navigate
-            if (selectedRole === 'hr_admin') {
-                navigate('/admin')
-            } else if (selectedRole === 'manager') {
-                navigate('/employee') // Verify if we want manager to go to employee or admin dashboard. Task said manager page.
-            } else if (selectedRole === 'employee') {
-                navigate('/employee')
-            } else {
-                navigate('/applicant/dashboard')
+                    if (candidate && candidate.role_id) {
+                        navigate('/applicant/dashboard')
+                    } else {
+                        navigate('/applicant')
+                    }
+                    break
+                default:
+                    navigate('/applicant/dashboard')
+                    break
             }
 
         } catch (err) {
@@ -264,9 +252,9 @@ const Login = () => {
 
                         {/* Quick Links */}
                         <div className="login-footer">
-                            <a href="/register" className="link">
-                                Apply as Candidate
-                            </a>
+                            <Link to="/register" className="link font-bold text-primary hover:text-purple-700">
+                                Create Account
+                            </Link>
                             <span className="separator">•</span>
                             <a href="#" className="link">
                                 Trust & Privacy

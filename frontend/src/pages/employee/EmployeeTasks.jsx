@@ -1,85 +1,150 @@
-import React from 'react'
-import DashboardLayout from '../../components/layout/DashboardLayout'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import React, { useState, useEffect } from 'react';
+import DashboardLayout from '../../components/layout/DashboardLayout';
+import { getUserTasks, updateTaskStatus } from '../../api';
+import { socketService } from '../../socket';
+import { useAuth } from '../../AuthContext';
+import {
+    CheckCircle,
+    Clock,
+    AlertCircle,
+    FileText,
+    Briefcase
+} from 'lucide-react';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 
 const EmployeeTasks = () => {
-    // Mock Calendar Rendering
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    // Simple mock grid for Feb 2026 starting Sunday (Just generic structure)
-    // Feb 1 2026 is actually a Sunday.
-    const monthDates = Array.from({ length: 28 }, (_, i) => i + 1)
+    const { user } = useAuth();
+    const [tasks, setTasks] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (user) {
+            loadTasks();
+
+            // Connect WebSocket
+            socketService.connect(user.id);
+            const unsubscribe = socketService.subscribe((data) => {
+                if (data.type === 'task_assigned') {
+                    // Add new task to list or refresh
+                    setTasks(prev => [data.task, ...prev]);
+                    alert(`New Task Assigned: ${data.task.title}`);
+                }
+            });
+
+            return () => {
+                unsubscribe();
+                socketService.disconnect();
+            };
+        }
+    }, [user]);
+
+    const loadTasks = async () => {
+        setLoading(true);
+        try {
+            const data = await getUserTasks(user.id);
+            if (data.success) {
+                setTasks(data.tasks || []);
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleStatusChange = async (taskId, newStatus) => {
+        try {
+            const res = await updateTaskStatus(taskId, newStatus);
+            if (res.success) {
+                setTasks(prev => prev.map(t =>
+                    t.id === taskId ? { ...t, status: newStatus } : t
+                ));
+            }
+        } catch (err) {
+            console.error('Failed to update status', err);
+        }
+    };
+
+    const getPriorityColor = (p) => {
+        switch (p) {
+            case 'High': return 'text-red-600 bg-red-50 border-red-200';
+            case 'Medium': return 'text-blue-600 bg-blue-50 border-blue-200';
+            default: return 'text-green-600 bg-green-50 border-green-200';
+        }
+    };
 
     return (
-        <DashboardLayout title="Employee Dashboard" subtitle="Tasks, leave & feedback">
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '20px' }}>
-                <div>
-                    <h2 style={{ fontSize: '20px', fontWeight: 'bold' }}>My Schedule</h2>
-                    <p style={{ color: '#888', fontSize: '14px' }}>Track your assigned tasks and deadlines</p>
-                </div>
-
-                <div style={{ display: 'flex', backgroundColor: '#111115', padding: '4px', borderRadius: '8px', border: '1px solid #333' }}>
-                    <button style={{ padding: '8px 16px', borderRadius: '6px', background: '#6366f1', color: '#fff', border: 'none', fontSize: '12px', fontWeight: '600' }}>Calendar</button>
-                    <button style={{ padding: '8px 16px', borderRadius: '6px', background: 'transparent', color: '#888', border: 'none', fontSize: '12px', fontWeight: '600' }}>List</button>
-                </div>
-            </div>
-
-            <div style={{ backgroundColor: '#111115', borderRadius: '16px', border: '1px solid #222', overflow: 'hidden' }}>
-                {/* Calendar Header */}
-                <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #222' }}>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <button style={{ background: '#1a1a20', border: 'none', padding: '8px', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}><ChevronLeft size={16} /></button>
-                        <div style={{ fontSize: '16px', fontWeight: 'bold' }}>February 2026</div>
-                        <button style={{ background: '#1a1a20', border: 'none', padding: '8px', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}><ChevronRight size={16} /></button>
-                    </div>
-                    <button style={{ background: '#4338ca', border: 'none', padding: '8px 16px', borderRadius: '6px', color: '#fff', fontSize: '12px' }}>Today</button>
-                </div>
-
-                {/* Days Header */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', padding: '15px', borderBottom: '1px solid #222' }}>
-                    {days.map(day => (
-                        <div key={day} style={{ textAlign: 'center', fontSize: '12px', color: '#888', fontWeight: '600' }}>{day}</div>
-                    ))}
-                </div>
-
-                {/* Dates Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', minHeight: '500px' }}>
-                    {monthDates.map(date => (
-                        <div key={date} style={{
-                            borderRight: '1px solid #222',
-                            borderBottom: '1px solid #222',
-                            padding: '10px',
-                            minHeight: '100px',
-                            position: 'relative'
-                        }}>
-                            <div style={{ fontSize: '12px', color: '#fff', marginBottom: '5px' }}>{date}</div>
-                            {date === 5 && (
-                                <div style={{
-                                    fontSize: '10px', backgroundColor: '#1a1a20', padding: '4px 6px',
-                                    borderRadius: '4px', borderLeft: '2px solid #f59e0b', color: '#ccc'
-                                }}>
-                                    Complete Pr...
-                                </div>
-                            )}
-                            {/* Highlight selection mockup for 4th */}
-                            {date === 4 && (
-                                <div style={{
-                                    position: 'absolute', inset: '2px',
-                                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                                    border: '1px solid #6366f1', borderRadius: '4px',
-                                    zIndex: 0
-                                }}></div>
-                            )}
+        <DashboardLayout
+            title="My Tasks"
+            subtitle="Track your assigned tasks and deadlines."
+            sidebarTitle="Employee Portal"
+        >
+            {loading ? <LoadingSpinner /> : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {tasks.length === 0 ? (
+                        <div className="col-span-3 text-center py-10 text-muted">
+                            <CheckCircle size={48} className="mx-auto mb-4 text-gray-300" />
+                            <p>No tasks assigned yet. Enjoy your day!</p>
                         </div>
-                    ))}
-                    {/* Fill remaining empty cells for 5 weeks approx */}
-                    {[1, 2, 3, 4, 5, 6, 7].map(d => (
-                        <div key={`next-${d}`} style={{ borderRight: '1px solid #222', borderBottom: '1px solid #222', padding: '10px', opacity: 0.3 }}>{d}</div>
-                    ))}
-                </div>
-            </div>
-        </DashboardLayout>
-    )
-}
+                    ) : (
+                        tasks.map(task => (
+                            <div key={task.id} className="card hover:shadow-md transition-shadow">
+                                <div className="flex justify-between items-start mb-3">
+                                    <span className={`text-xs px-2 py-1 rounded-full border ${getPriorityColor(task.priority)}`}>
+                                        {task.priority} Priority
+                                    </span>
+                                    {task.status === 'Completed' ? (
+                                        <span className="text-green-600 flex items-center gap-1 text-sm font-bold">
+                                            <CheckCircle size={16} /> Done
+                                        </span>
+                                    ) : (
+                                        <span className="text-purple-600 text-sm font-bold">
+                                            {task.status}
+                                        </span>
+                                    )}
+                                </div>
 
-export default EmployeeTasks
+                                <h3 className="text-lg font-bold mb-2 text-primary">{task.title}</h3>
+                                <p className="text-secondary text-sm mb-4 line-clamp-2">
+                                    {task.description || 'No description provided.'}
+                                </p>
+
+                                <div className="text-xs text-muted mb-4 space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <Clock size={14} />
+                                        <span>Due: {new Date(task.deadline).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Briefcase size={14} />
+                                        <span>Assigned By: Admin</span>
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 border-t border-light flex gap-2">
+                                    {task.status !== 'Completed' && (
+                                        <button
+                                            onClick={() => handleStatusChange(task.id, 'Completed')}
+                                            className="btn btn-primary flex-1 text-sm py-2"
+                                        >
+                                            Mark Complete
+                                        </button>
+                                    )}
+                                    {task.status === 'Pending' && (
+                                        <button
+                                            onClick={() => handleStatusChange(task.id, 'In Progress')}
+                                            className="btn btn-secondary flex-1 text-sm py-2"
+                                        >
+                                            Start Work
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
+        </DashboardLayout>
+    );
+};
+
+export default EmployeeTasks;

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { getJobRoles } from '../api'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import DashboardLayout from '../components/layout/DashboardLayout'
+import { Briefcase, ArrowRight, CheckCircle, Search } from 'lucide-react'
 
 function Apply() {
     const { candidateData, updateCandidateData, STATUS } = useAuth()
@@ -12,6 +14,11 @@ function Apply() {
     const [selectedRole, setSelectedRole] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
+
+    const menuItems = [
+        { label: 'Select Role', path: '/applicant', icon: Briefcase },
+        // Add more if needed, but for now this is the entry point
+    ]
 
     useEffect(() => {
         // If role already selected, skip to upload
@@ -55,66 +62,146 @@ function Apply() {
 
     if (loading) {
         return (
-            <div style={{ textAlign: 'center', marginTop: 50 }}>
-                <h1>Apply for a Position</h1>
-                <LoadingSpinner />
-                <p style={{ marginTop: 20 }}>Loading available positions...</p>
-            </div>
+            <DashboardLayout title="Open Positions" menuItems={menuItems} sidebarTitle="Apply Now">
+                <div style={{ padding: '3rem', textAlign: 'center' }}>
+                    <LoadingSpinner />
+                    <p style={{ marginTop: '1rem', color: '#666' }}>Finding the perfect role for you...</p>
+                </div>
+            </DashboardLayout>
         )
     }
 
     if (error) {
         return (
-            <div>
-                <h1>Apply for a Position</h1>
-                <p className="error">{error}</p>
-            </div>
+            <DashboardLayout title="Open Positions" menuItems={menuItems} sidebarTitle="Apply Now">
+                <div className="card" style={{ padding: '2rem', textAlign: 'center', borderColor: '#fee2e2', background: '#fef2f2' }}>
+                    <h3 style={{ color: '#ef4444' }}>Unable to load jobs</h3>
+                    <p style={{ color: '#b91c1c' }}>{error}</p>
+                    <button onClick={loadRoles} className="btn btn-secondary" style={{ marginTop: '1rem' }}>Try Again</button>
+                </div>
+            </DashboardLayout>
         )
     }
 
     return (
-        <div>
-            <h1>Apply for a Position</h1>
-            <p>Select a role you'd like to apply for:</p>
+        <DashboardLayout
+            title="Browse Open Roles"
+            subtitle="Select a position to begin your application process."
+            menuItems={menuItems}
+            sidebarTitle="Careers"
+        >
+            <div className="dashboard-content" style={{ maxWidth: '900px' }}>
 
-            <div style={{ marginTop: 20 }}>
-                {roles.map(role => (
-                    <div
-                        key={role.id}
-                        onClick={() => handleSelect(role)}
-                        style={{
-                            padding: 20,
-                            marginBottom: 15,
-                            border: selectedRole?.id === role.id ? '2px solid #4caf50' : '1px solid #ddd',
-                            borderRadius: 8,
-                            cursor: 'pointer',
-                            background: selectedRole?.id === role.id ? '#e8f5e9' : '#fff',
-                        }}
-                    >
-                        <h3 style={{ margin: 0 }}>{role.role_name}</h3>
-                        <p style={{ margin: '10px 0 0', color: '#666', fontSize: 14 }}>
-                            Level: {role.role_level || role.min_experience_level || 'Any'}
-                        </p>
-                        {role.required_skills && (
-                            <p style={{ margin: '5px 0 0', fontSize: 12, color: '#888' }}>
-                                Skills: {Array.isArray(role.required_skills)
-                                    ? role.required_skills.slice(0, 5).join(', ')
-                                    : role.required_skills}
-                                {role.required_skills.length > 5 && '...'}
+                <div className="grid-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                    {roles.map(role => {
+                        const isSelected = selectedRole?.id === role.id
+                        return (
+                            <div
+                                key={role.id}
+                                onClick={() => handleSelect(role)}
+                                className="card interactive-card"
+                                style={{
+                                    cursor: 'pointer',
+                                    border: isSelected ? '2px solid #6366f1' : '1px solid transparent', // Focus ring
+                                    background: isSelected ? '#f5f3ff' : 'white',
+                                    transform: isSelected ? 'translateY(-2px)' : 'none',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                                    <div style={{
+                                        padding: '10px',
+                                        borderRadius: '10px',
+                                        background: isSelected ? '#6366f1' : '#eff6ff',
+                                        color: isSelected ? 'white' : '#3b82f6'
+                                    }}>
+                                        <Briefcase size={20} />
+                                    </div>
+                                    {isSelected && <CheckCircle size={20} color="#6366f1" />}
+                                </div>
+
+                                <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: 'bold', color: '#1e293b' }}>
+                                    {role.role_name}
+                                </h3>
+
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                                    <span style={{
+                                        fontSize: '0.75rem',
+                                        padding: '4px 8px',
+                                        borderRadius: '4px',
+                                        background: '#e2e8f0',
+                                        color: '#475569',
+                                        textTransform: 'uppercase',
+                                        fontWeight: '600'
+                                    }}>
+                                        {role.min_experience_level || 'Entry Level'}
+                                    </span>
+                                    {role.role_level && (
+                                        <span style={{ fontSize: '0.75rem', padding: '4px 8px', borderRadius: '4px', background: '#f1f5f9', color: '#64748b' }}>
+                                            {role.role_level}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {role.required_skills && (
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.25rem', fontWeight: '600' }}>Required Skills:</p>
+                                        <p style={{ fontSize: '0.85rem', color: '#334155', margin: 0, lineHeight: '1.4' }}>
+                                            {Array.isArray(role.required_skills)
+                                                ? role.required_skills.slice(0, 4).join(', ')
+                                                : role.required_skills}
+                                            {role.required_skills.length > 4 && '...'}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+
+                {/* Footer Action */}
+                <div style={{
+                    position: 'sticky',
+                    bottom: '20px',
+                    padding: '1.5rem',
+                    background: 'rgba(255,255,255,0.9)',
+                    backdropFilter: 'blur(10px)',
+                    borderTop: '1px solid #e2e8f0',
+                    marginTop: '2rem',
+                    borderRadius: '16px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    boxShadow: '0 -4px 20px rgba(0,0,0,0.05)'
+                }}>
+                    <div>
+                        {selectedRole ? (
+                            <p style={{ margin: 0, color: '#1e293b' }}>
+                                Selected: <strong>{selectedRole.role_name}</strong>
                             </p>
+                        ) : (
+                            <p style={{ margin: 0, color: '#64748b' }}>Please select a role to continue</p>
                         )}
                     </div>
-                ))}
+                    <button
+                        onClick={handleContinue}
+                        disabled={!selectedRole}
+                        className="btn btn-primary"
+                        style={{
+                            padding: '12px 24px',
+                            fontSize: '1rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            opacity: selectedRole ? 1 : 0.5,
+                            cursor: selectedRole ? 'pointer' : 'not-allowed'
+                        }}
+                    >
+                        Apply Now <ArrowRight size={18} />
+                    </button>
+                </div>
             </div>
-
-            <button
-                onClick={handleContinue}
-                disabled={!selectedRole}
-                style={{ marginTop: 20, padding: '12px 30px' }}
-            >
-                Continue with {selectedRole?.role_name || 'Selected Role'} →
-            </button>
-        </div>
+        </DashboardLayout>
     )
 }
 

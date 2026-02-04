@@ -135,7 +135,7 @@ export function AuthProvider({ children }) {
                 .from('user_roles')
                 .select('role')
                 .eq('user_id', userId)
-                .single()
+                .maybeSingle()
 
             if (data) {
                 setUserRole(data.role)
