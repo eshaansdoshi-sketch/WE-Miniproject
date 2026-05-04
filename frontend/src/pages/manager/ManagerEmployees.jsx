@@ -3,12 +3,12 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import { Users, Mail, MapPin, Star } from 'lucide-react';
 
 const EMPLOYEES = [
-    { id: 'e1', name: 'Sarah Johnson', email: 'sarah@hirrd.dev', role: 'Senior Dev', dept: 'Engineering', location: 'Office', rating: 4.8, projects: 5, status: 'active' },
-    { id: 'e2', name: 'Mike Chen', email: 'mike@hirrd.dev', role: 'Backend Dev', dept: 'Engineering', location: 'Remote', rating: 4.5, projects: 3, status: 'active' },
-    { id: 'e3', name: 'Emily Davis', email: 'emily@hirrd.dev', role: 'UI Designer', dept: 'Design', location: 'Office', rating: 4.9, projects: 4, status: 'active' },
-    { id: 'e4', name: 'Alex Kumar', email: 'alex@hirrd.dev', role: 'Data Scientist', dept: 'Data', location: 'Remote', rating: 4.3, projects: 2, status: 'active' },
-    { id: 'e5', name: 'Rachel Park', email: 'rachel@hirrd.dev', role: 'Product Manager', dept: 'Product', location: 'Office', rating: 4.6, projects: 6, status: 'on_leave' },
-    { id: 'e6', name: 'David Lee', email: 'david@hirrd.dev', role: 'Full-Stack Dev', dept: 'Engineering', location: 'Field', rating: 4.1, projects: 3, status: 'active' },
+    { id: 'e1', name: 'Gauri Barve', email: 'gauri@hirrd.dev', role: 'Senior Dev', dept: 'Engineering', location: 'Office', rating: 4.8, projects: 5, status: 'active' },
+    { id: 'e2', name: 'Prisha Kulkarni', email: 'prisha@hirrd.dev', role: 'Backend Dev', dept: 'Engineering', location: 'Remote', rating: 4.5, projects: 3, status: 'active' },
+    { id: 'e3', name: 'Eshaan Doshi', email: 'eshaan@hirrd.dev', role: 'UI Designer', dept: 'Design', location: 'Office', rating: 4.9, projects: 4, status: 'active' },
+    { id: 'e4', name: 'Rhushiesh', email: 'rush@hirrd.dev', role: 'Data Scientist', dept: 'Data', location: 'Remote', rating: 4.3, projects: 2, status: 'active' },
+    { id: 'e5', name: 'player1', email: 'p1@hirrd.dev', role: 'Product Manager', dept: 'Product', location: 'Office', rating: 4.6, projects: 6, status: 'on_leave' },
+    { id: 'e6', name: 'player2', email: 'p2@hirrd.dev', role: 'Full-Stack Dev', dept: 'Engineering', location: 'Field', rating: 4.1, projects: 3, status: 'active' },
     { id: 'e7', name: 'Priya Sharma', email: 'priya@hirrd.dev', role: 'QA Lead', dept: 'QA', location: 'Office', rating: 4.7, projects: 4, status: 'active' },
     { id: 'e8', name: 'James Wilson', email: 'james@hirrd.dev', role: 'DevOps Eng', dept: 'DevOps', location: 'Remote', rating: 4.4, projects: 5, status: 'active' },
 ];

@@ -11,11 +11,11 @@ const ManagerReports = () => {
     ];
 
     const topPerformers = [
-        { name: 'Emily Davis', score: 96, dept: 'Design' },
-        { name: 'Sarah Johnson', score: 94, dept: 'Engineering' },
+        { name: 'Eshaan Doshi', score: 96, dept: 'Design' },
+        { name: 'Gauri Barve', score: 94, dept: 'Engineering' },
         { name: 'Priya Sharma', score: 91, dept: 'QA' },
         { name: 'James Wilson', score: 89, dept: 'DevOps' },
-        { name: 'Mike Chen', score: 87, dept: 'Engineering' },
+        { name: 'Prisha Kulkarni', score: 87, dept: 'Engineering' },
     ];
 
     const monthly = [

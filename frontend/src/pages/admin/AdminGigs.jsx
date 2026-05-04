@@ -3,11 +3,11 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import { Briefcase, Clock, DollarSign, Users, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
 
 const HARDCODED_GIGS = [
-    { id: 'g1', title: 'Cloud Migration Sprint', client: 'FinSecure Corp', type: 'Internal', budget: '$45,000', duration: '6 weeks', team_size: 4, skills: ['AWS', 'Terraform', 'Docker'], status: 'active', priority: 'High', progress: 65, assigned: ['Sarah J.', 'Mike C.', 'Alex K.', 'David L.'] },
-    { id: 'g2', title: 'Mobile App Redesign', client: 'RetailMax', type: 'Client', budget: '$28,000', duration: '4 weeks', team_size: 3, skills: ['React Native', 'Figma', 'TypeScript'], status: 'active', priority: 'Medium', progress: 40, assigned: ['Emily D.', 'Rachel P.', 'Priya S.'] },
+    { id: 'g1', title: 'Cloud Migration Sprint', client: 'FinSecure Corp', type: 'Internal', budget: '$45,000', duration: '6 weeks', team_size: 4, skills: ['AWS', 'Terraform', 'Docker'], status: 'active', priority: 'High', progress: 65, assigned: ['Gauri B.', 'Prisha K.', 'Rhushiesh', 'player2'] },
+    { id: 'g2', title: 'Mobile App Redesign', client: 'RetailMax', type: 'Client', budget: '$28,000', duration: '4 weeks', team_size: 3, skills: ['React Native', 'Figma', 'TypeScript'], status: 'active', priority: 'Medium', progress: 40, assigned: ['Eshaan D.', 'player1', 'Priya S.'] },
     { id: 'g3', title: 'Data Pipeline Optimization', client: 'Internal — Analytics', type: 'Internal', budget: '$15,000', duration: '3 weeks', team_size: 2, skills: ['Python', 'Apache Spark', 'SQL'], status: 'completed', priority: 'Low', progress: 100, assigned: ['James W.', 'Ravi P.'] },
     { id: 'g4', title: 'Security Audit Q2', client: 'Compliance Team', type: 'Internal', budget: '$12,000', duration: '2 weeks', team_size: 2, skills: ['Pen Testing', 'OWASP', 'Network Security'], status: 'pending', priority: 'High', progress: 0, assigned: [] },
-    { id: 'g5', title: 'AI Chatbot Integration', client: 'SupportFirst Inc.', type: 'Client', budget: '$55,000', duration: '8 weeks', team_size: 5, skills: ['NLP', 'Python', 'React', 'Node.js'], status: 'active', priority: 'High', progress: 25, assigned: ['Arjun M.', 'Lisa C.', 'Sophie M.', 'Emily D.', 'Mike C.'] },
+    { id: 'g5', title: 'AI Chatbot Integration', client: 'SupportFirst Inc.', type: 'Client', budget: '$55,000', duration: '8 weeks', team_size: 5, skills: ['NLP', 'Python', 'React', 'Node.js'], status: 'active', priority: 'High', progress: 25, assigned: ['Arjun M.', 'Lisa C.', 'Sophie M.', 'Eshaan D.', 'Prisha K.'] },
     { id: 'g6', title: 'HR Dashboard v3', client: 'Internal — HR', type: 'Internal', budget: '$18,000', duration: '5 weeks', team_size: 3, skills: ['React', 'D3.js', 'Node.js'], status: 'pending', priority: 'Medium', progress: 0, assigned: [] },
 ];
 

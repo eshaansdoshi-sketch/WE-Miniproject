@@ -78,27 +78,23 @@ const Login = () => {
                     setLoading(false)
                     return
                 }
-                const result = await signUp(email, password, fullName, selectedRole)
-                navigateByRole(result.user.role)
-            } else {
-                // Login flow — try login first, if fails offer to create account
                 try {
-                    const result = await signIn(email, password)
-                    if (!result?.user?.id) throw new Error('Login failed')
+                    const result = await signUp(email, password, fullName, selectedRole)
                     navigateByRole(result.user.role)
-                } catch (loginErr) {
-                    // If user not found, switch to register mode
-                    if (loginErr.message?.toLowerCase().includes('not found') ||
-                        loginErr.message?.toLowerCase().includes('no user') ||
-                        loginErr.message?.toLowerCase().includes('invalid credentials') ||
-                        loginErr.message?.toLowerCase().includes('invalid email')) {
-                        setIsNewUser(true)
-                        setError('No account found. Fill in your name below to create one.')
-                        setLoading(false)
-                        return
+                } catch (regErr) {
+                    // If email already registered, switch back to login mode
+                    if (regErr.message?.toLowerCase().includes('already registered')) {
+                        setIsNewUser(false)
+                        setError('This email is already registered. Please sign in with your password.')
+                    } else {
+                        throw regErr
                     }
-                    throw loginErr
                 }
+            } else {
+                // Login flow
+                const result = await signIn(email, password)
+                if (!result?.user?.id) throw new Error('Login failed')
+                navigateByRole(result.user.role)
             }
         } catch (err) {
             console.error('Auth error:', err)

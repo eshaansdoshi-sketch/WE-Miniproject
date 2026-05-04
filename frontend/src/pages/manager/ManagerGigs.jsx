@@ -3,8 +3,8 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import { Briefcase, Clock, DollarSign, Users } from 'lucide-react';
 
 const GIGS = [
-    { id: 'g1', title: 'Cloud Migration Sprint', budget: '$45K', duration: '6 wks', progress: 65, status: 'active', team: ['Sarah J.', 'Mike C.'], skills: ['AWS', 'Docker'] },
-    { id: 'g2', title: 'Mobile App Redesign', budget: '$28K', duration: '4 wks', progress: 40, status: 'active', team: ['Emily D.', 'Rachel P.'], skills: ['React Native', 'Figma'] },
+    { id: 'g1', title: 'Cloud Migration Sprint', budget: '$45K', duration: '6 wks', progress: 65, status: 'active', team: ['Gauri B.', 'Prisha K.'], skills: ['AWS', 'Docker'] },
+    { id: 'g2', title: 'Mobile App Redesign', budget: '$28K', duration: '4 wks', progress: 40, status: 'active', team: ['Eshaan D.', 'player1'], skills: ['React Native', 'Figma'] },
     { id: 'g3', title: 'AI Chatbot Integration', budget: '$55K', duration: '8 wks', progress: 25, status: 'active', team: ['Arjun M.', 'Lisa C.'], skills: ['NLP', 'Python'] },
     { id: 'g4', title: 'Security Audit Q2', budget: '$12K', duration: '2 wks', progress: 0, status: 'pending', team: [], skills: ['OWASP', 'Pen Testing'] },
 ];

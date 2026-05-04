@@ -10,11 +10,11 @@ import {
 
 // ── Hardcoded schedules ─────────────────────────────────────
 const HARDCODED_SCHEDULES = [
-    { id: 's1', employee_id: 'emp_001', employee_name: 'Sarah Johnson', shift_date: '2026-05-05', start_time: '09:00', end_time: '17:00', work_type: 'Office', notes: 'Sprint planning day' },
-    { id: 's2', employee_id: 'emp_002', employee_name: 'Mike Chen', shift_date: '2026-05-05', start_time: '10:00', end_time: '18:00', work_type: 'Remote', notes: 'Working from home' },
-    { id: 's3', employee_id: 'emp_003', employee_name: 'Emily Davis', shift_date: '2026-05-06', start_time: '08:00', end_time: '16:00', work_type: 'Field', notes: 'Client site visit' },
-    { id: 's4', employee_id: 'emp_004', employee_name: 'Alex Kumar', shift_date: '2026-05-06', start_time: '09:00', end_time: '17:00', work_type: 'Office', notes: '' },
-    { id: 's5', employee_id: 'emp_005', employee_name: 'Rachel Park', shift_date: '2026-05-07', start_time: '11:00', end_time: '19:00', work_type: 'Remote', notes: 'Late shift' },
+    { id: 's1', employee_id: 'emp_001', employee_name: 'Gauri Barve', shift_date: '2026-05-05', start_time: '09:00', end_time: '17:00', work_type: 'Office', notes: 'Sprint planning day' },
+    { id: 's2', employee_id: 'emp_002', employee_name: 'Prisha Kulkarni', shift_date: '2026-05-05', start_time: '10:00', end_time: '18:00', work_type: 'Remote', notes: 'Working from home' },
+    { id: 's3', employee_id: 'emp_003', employee_name: 'Eshaan Doshi', shift_date: '2026-05-06', start_time: '08:00', end_time: '16:00', work_type: 'Field', notes: 'Client site visit' },
+    { id: 's4', employee_id: 'emp_004', employee_name: 'Rhushiesh', shift_date: '2026-05-06', start_time: '09:00', end_time: '17:00', work_type: 'Office', notes: '' },
+    { id: 's5', employee_id: 'emp_005', employee_name: 'player1', shift_date: '2026-05-07', start_time: '11:00', end_time: '19:00', work_type: 'Remote', notes: 'Late shift' },
 ];
 
 const ManagerSchedule = () => {
@@ -77,7 +77,7 @@ const ManagerSchedule = () => {
                                 required
                                 value={formData.employee_id}
                                 onChange={e => setFormData({ ...formData, employee_id: e.target.value })}
-                                placeholder="e.g. Sarah Johnson"
+                                placeholder="e.g. Gauri Barve"
                                 className="w-full text-sm"
                             />
                         </div>

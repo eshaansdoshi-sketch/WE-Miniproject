@@ -40,9 +40,9 @@ const ManagerDashboard = () => {
     ];
 
     const leaveRequests = [
-        { id: 1, employee: 'Sarah Johnson', avatar: 'SJ', type: 'Annual Leave', dates: 'Feb 10 - Feb 14', days: 5, color: '#9333ea' },
-        { id: 2, employee: 'Mike Chen', avatar: 'MC', type: 'Sick Leave', dates: 'Feb 6 - Feb 7', days: 2, color: '#3b82f6' },
-        { id: 3, employee: 'Emily Davis', avatar: 'ED', type: 'Work From Home', dates: 'Feb 12', days: 1, color: '#10b981' },
+        { id: 1, employee: 'Gauri Barve', avatar: 'GB', type: 'Annual Leave', dates: 'Feb 10 - Feb 14', days: 5, color: '#9333ea' },
+        { id: 2, employee: 'Prisha Kulkarni', avatar: 'PK', type: 'Sick Leave', dates: 'Feb 6 - Feb 7', days: 2, color: '#3b82f6' },
+        { id: 3, employee: 'Eshaan Doshi', avatar: 'ED', type: 'Work From Home', dates: 'Feb 12', days: 1, color: '#10b981' },
     ];
 
     const teamGigs = [
@@ -50,19 +50,19 @@ const ManagerDashboard = () => {
             id: 1, title: 'Q1 Performance Review',
             desc: 'Annual performance assessment for Q1',
             deadline: 'Feb 28', progress: 65, priority: 'High',
-            assignees: ['SJ', 'MC', 'ED']
+            assignees: ['GB', 'PK', 'ED']
         },
         {
             id: 2, title: 'New Hire Onboarding',
             desc: 'Onboard 3 new team members',
             deadline: 'Feb 15', progress: 40, priority: 'Medium',
-            assignees: ['AK', 'RB']
+            assignees: ['RH', 'RB']
         },
         {
             id: 3, title: 'Team Building Event',
             desc: 'Quarterly team activity planning',
             deadline: 'Feb 20', progress: 20, priority: 'Low',
-            assignees: ['SJ', 'ED']
+            assignees: ['GB', 'ED']
         }
     ];
 

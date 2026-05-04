@@ -4,12 +4,12 @@ import { Users, Search } from 'lucide-react';
 
 const USERS = [
     { id: 'u1', name: 'Admin Master', email: 'admin@hirrd.dev', role: 'admin', dept: 'HR', status: 'active', last: '2 min ago' },
-    { id: 'u2', name: 'Sarah Johnson', email: 'sarah@hirrd.dev', role: 'manager', dept: 'Engineering', status: 'active', last: '1 hr ago' },
-    { id: 'u3', name: 'Mike Chen', email: 'mike@hirrd.dev', role: 'applicant', dept: 'Engineering', status: 'active', last: '3 hrs ago' },
-    { id: 'u4', name: 'Emily Davis', email: 'emily@hirrd.dev', role: 'applicant', dept: 'Design', status: 'active', last: '1 day ago' },
-    { id: 'u5', name: 'Alex Kumar', email: 'alex@hirrd.dev', role: 'manager', dept: 'Data', status: 'active', last: '30 min ago' },
-    { id: 'u6', name: 'Rachel Park', email: 'rachel@hirrd.dev', role: 'applicant', dept: 'Product', status: 'inactive', last: '2 wks ago' },
-    { id: 'u7', name: 'David Lee', email: 'david@hirrd.dev', role: 'applicant', dept: 'Engineering', status: 'active', last: '5 hrs ago' },
+    { id: 'u2', name: 'Gauri Barve', email: 'gauri@hirrd.dev', role: 'manager', dept: 'Engineering', status: 'active', last: '1 hr ago' },
+    { id: 'u3', name: 'Prisha Kulkarni', email: 'prisha@hirrd.dev', role: 'applicant', dept: 'Engineering', status: 'active', last: '3 hrs ago' },
+    { id: 'u4', name: 'Eshaan Doshi', email: 'eshaan@hirrd.dev', role: 'applicant', dept: 'Design', status: 'active', last: '1 day ago' },
+    { id: 'u5', name: 'Rhushiesh', email: 'rush@hirrd.dev', role: 'manager', dept: 'Data', status: 'active', last: '30 min ago' },
+    { id: 'u6', name: 'player1', email: 'p1@hirrd.dev', role: 'applicant', dept: 'Product', status: 'inactive', last: '2 wks ago' },
+    { id: 'u7', name: 'player2', email: 'p2@hirrd.dev', role: 'applicant', dept: 'Engineering', status: 'active', last: '5 hrs ago' },
     { id: 'u8', name: 'Priya Sharma', email: 'priya@hirrd.dev', role: 'applicant', dept: 'QA', status: 'suspended', last: '1 mo ago' },
     { id: 'u9', name: 'James Wilson', email: 'james@hirrd.dev', role: 'manager', dept: 'DevOps', status: 'active', last: '10 min ago' },
     { id: 'u10', name: 'Sophie Martin', email: 'sophie@hirrd.dev', role: 'applicant', dept: 'Marketing', status: 'active', last: '4 hrs ago' },

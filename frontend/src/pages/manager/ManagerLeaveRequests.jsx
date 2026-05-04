@@ -3,12 +3,12 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import { Clock, Check, X, User } from 'lucide-react';
 
 const REQUESTS = [
-    { id: 'lr1', name: 'Sarah Johnson', type: 'Annual Leave', from: '2026-05-10', to: '2026-05-14', days: 5, reason: 'Family vacation to Goa.', status: 'pending', avatar: 'SJ' },
-    { id: 'lr2', name: 'Mike Chen', type: 'Sick Leave', from: '2026-05-05', to: '2026-05-06', days: 2, reason: 'Feeling unwell, doctor appointment.', status: 'pending', avatar: 'MC' },
-    { id: 'lr3', name: 'Emily Davis', type: 'Work From Home', from: '2026-05-07', to: '2026-05-09', days: 3, reason: 'Plumber visiting — need to be home.', status: 'pending', avatar: 'ED' },
-    { id: 'lr4', name: 'Alex Kumar', type: 'Annual Leave', from: '2026-04-20', to: '2026-04-22', days: 3, reason: 'Personal errands.', status: 'approved', avatar: 'AK' },
-    { id: 'lr5', name: 'Rachel Park', type: 'Sick Leave', from: '2026-04-15', to: '2026-04-15', days: 1, reason: 'Migraine.', status: 'approved', avatar: 'RP' },
-    { id: 'lr6', name: 'David Lee', type: 'Parental Leave', from: '2026-03-01', to: '2026-05-30', days: 90, reason: 'Paternity leave.', status: 'approved', avatar: 'DL' },
+    { id: 'lr1', name: 'Gauri Barve', type: 'Annual Leave', from: '2026-05-10', to: '2026-05-14', days: 5, reason: 'Family vacation to Goa.', status: 'pending', avatar: 'GB' },
+    { id: 'lr2', name: 'Prisha Kulkarni', type: 'Sick Leave', from: '2026-05-05', to: '2026-05-06', days: 2, reason: 'Feeling unwell, doctor appointment.', status: 'pending', avatar: 'PK' },
+    { id: 'lr3', name: 'Eshaan Doshi', type: 'Work From Home', from: '2026-05-07', to: '2026-05-09', days: 3, reason: 'Plumber visiting — need to be home.', status: 'pending', avatar: 'ED' },
+    { id: 'lr4', name: 'Rhushiesh', type: 'Annual Leave', from: '2026-04-20', to: '2026-04-22', days: 3, reason: 'Personal errands.', status: 'approved', avatar: 'RH' },
+    { id: 'lr5', name: 'player1', type: 'Sick Leave', from: '2026-04-15', to: '2026-04-15', days: 1, reason: 'Migraine.', status: 'approved', avatar: 'P1' },
+    { id: 'lr6', name: 'player2', type: 'Parental Leave', from: '2026-03-01', to: '2026-05-30', days: 90, reason: 'Paternity leave.', status: 'approved', avatar: 'P2' },
     { id: 'lr7', name: 'James Wilson', type: 'Annual Leave', from: '2026-04-10', to: '2026-04-11', days: 2, reason: 'Wedding ceremony.', status: 'rejected', avatar: 'JW' },
 ];
 

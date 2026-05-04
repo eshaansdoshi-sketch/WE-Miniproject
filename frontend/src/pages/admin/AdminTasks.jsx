@@ -7,12 +7,12 @@ import {
 
 // ── Hardcoded employees ──────────────────────────────────────
 const HARDCODED_EMPLOYEES = [
-    { id: 'emp_001', name: 'Sarah Johnson', email: 'sarah@hirrd.dev', role: 'applicant', department: 'Engineering' },
-    { id: 'emp_002', name: 'Mike Chen', email: 'mike@hirrd.dev', role: 'applicant', department: 'Engineering' },
-    { id: 'emp_003', name: 'Emily Davis', email: 'emily@hirrd.dev', role: 'applicant', department: 'Design' },
-    { id: 'emp_004', name: 'Alex Kumar', email: 'alex@hirrd.dev', role: 'applicant', department: 'Data' },
-    { id: 'emp_005', name: 'Rachel Park', email: 'rachel@hirrd.dev', role: 'applicant', department: 'Product' },
-    { id: 'emp_006', name: 'David Lee', email: 'david@hirrd.dev', role: 'applicant', department: 'Engineering' },
+    { id: 'emp_001', name: 'Gauri Barve', email: 'gauri@hirrd.dev', role: 'applicant', department: 'Engineering' },
+    { id: 'emp_002', name: 'Prisha Kulkarni', email: 'prisha@hirrd.dev', role: 'applicant', department: 'Engineering' },
+    { id: 'emp_003', name: 'Eshaan Doshi', email: 'eshaan@hirrd.dev', role: 'applicant', department: 'Design' },
+    { id: 'emp_004', name: 'Rhushiesh', email: 'rush@hirrd.dev', role: 'applicant', department: 'Data' },
+    { id: 'emp_005', name: 'player1', email: 'p1@hirrd.dev', role: 'applicant', department: 'Product' },
+    { id: 'emp_006', name: 'player2', email: 'p2@hirrd.dev', role: 'applicant', department: 'Engineering' },
     { id: 'emp_007', name: 'Priya Sharma', email: 'priya@hirrd.dev', role: 'applicant', department: 'QA' },
     { id: 'emp_008', name: 'James Wilson', email: 'james@hirrd.dev', role: 'applicant', department: 'DevOps' },
 ];

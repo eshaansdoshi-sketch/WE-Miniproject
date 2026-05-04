@@ -107,13 +107,25 @@ function ApplicantDashboard() {
         { label: 'My Profile', path: '/applicant/profile', icon: User },    // Placeholder path
     ]
 
-    // If no candidate data, show loading
+    // If no candidate data, show default start state
     if (!candidateData) {
         return (
             <DashboardLayout title="My Application" menuItems={menuItems} sidebarTitle="Candidate Portal">
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
-                    <h2>Loading...</h2>
-                    <p>Fetching your application status...</p>
+                <div className="card" style={{ maxWidth: '600px', padding: '2.5rem', textAlign: 'center' }}>
+                    <div style={{
+                        width: 64, height: 64, borderRadius: '50%', margin: '0 auto 1rem',
+                        background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b'
+                    }}>
+                        <Briefcase size={28} />
+                    </div>
+                    <h2 style={{ margin: '0 0 0.5rem', color: '#1e293b' }}>Start Your Application</h2>
+                    <p style={{ margin: '0 0 1.5rem', color: '#64748b', lineHeight: 1.6 }}>
+                        Browse available roles and submit your resume to get started with our AI-powered hiring process.
+                    </p>
+                    <button onClick={() => navigate('/applicant')} className="btn btn-primary"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        Browse Jobs <ArrowRight size={18} />
+                    </button>
                 </div>
             </DashboardLayout>
         )
