@@ -7,22 +7,25 @@ import Screening from './pages/Screening'
 import TestPage from './pages/TestPage'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminReports from './pages/AdminReports'
-import AdminTasks from './pages/admin/AdminTasks' // New
+import AdminTasks from './pages/admin/AdminTasks'
+import AdminLeavePolicies from './pages/admin/AdminLeavePolicies'
+import AdminGigs from './pages/admin/AdminGigs'
+import AdminUsers from './pages/admin/AdminUsers'
+import AdminRoles from './pages/admin/AdminRoles'
+import AdminSettings from './pages/admin/AdminSettings'
 import CandidateDetailPage from './pages/CandidateDetailPage'
 import Apply from './pages/Apply'
 import ApplicantDashboard from './pages/ApplicantDashboard'
 import LandingPage from './pages/LandingPage'
 
-// Employee Pages
-import EmployeeDashboard from './pages/employee/EmployeeDashboard'
-import EmployeeTasks from './pages/employee/EmployeeTasks'
-import EmployeeSchedule from './pages/employee/EmployeeSchedule' // New
-import EmployeeLeave from './pages/employee/EmployeeLeave'
-import EmployeeFeedback from './pages/employee/EmployeeFeedback'
-
 // Manager Pages
 import ManagerDashboard from './pages/manager/ManagerDashboard'
-import ManagerSchedule from './pages/manager/ManagerSchedule' // New
+import ManagerSchedule from './pages/manager/ManagerSchedule'
+import ManagerLeaveRequests from './pages/manager/ManagerLeaveRequests'
+import ManagerGigs from './pages/manager/ManagerGigs'
+import ManagerEmployees from './pages/manager/ManagerEmployees'
+import ManagerReports from './pages/manager/ManagerReports'
+import ManagerSettings from './pages/manager/ManagerSettings'
 
 // Protected route wrapper - with completed status guard for applicants
 function ProtectedRoute({ children, requiredRole }) {
@@ -127,6 +130,31 @@ function App() {
                             <CandidateDetailPage />
                         </ProtectedRoute>
                     } />
+                    <Route path="/admin/policies" element={
+                        <ProtectedRoute requiredRole="admin">
+                            <AdminLeavePolicies />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/gigs" element={
+                        <ProtectedRoute requiredRole="admin">
+                            <AdminGigs />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/users" element={
+                        <ProtectedRoute requiredRole="admin">
+                            <AdminUsers />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/roles" element={
+                        <ProtectedRoute requiredRole="admin">
+                            <AdminRoles />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/settings" element={
+                        <ProtectedRoute requiredRole="admin">
+                            <AdminSettings />
+                        </ProtectedRoute>
+                    } />
 
                     {/* Applicant routes */}
                     <Route path="/applicant" element={
@@ -155,38 +183,7 @@ function App() {
                         </ProtectedRoute>
                     } />
 
-                    {/* New Employee Routes */}
-                    <Route path="/employee" element={
-                        <ProtectedRoute>
-                            <EmployeeDashboard />
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/employee/tasks" element={
-                        <ProtectedRoute>
-                            <EmployeeTasks />
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/employee/schedule" element={
-                        <ProtectedRoute>
-                            <EmployeeSchedule />
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/employee/leave" element={
-                        <ProtectedRoute>
-                            <EmployeeLeave />
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/employee/feedback" element={
-                        <ProtectedRoute>
-                            <EmployeeFeedback />
-                        </ProtectedRoute>
-                    } />
-                    {/* Placeholder for settings */}
-                    <Route path="/employee/settings" element={
-                        <ProtectedRoute>
-                            <EmployeeDashboard /> {/* Redirect to dashboard for now */}
-                        </ProtectedRoute>
-                    } />
+                    {/* Employee routes removed — use /manager for team management */}
 
                     {/* Manager Routes */}
                     <Route path="/manager" element={
@@ -199,34 +196,29 @@ function App() {
                             <ManagerSchedule />
                         </ProtectedRoute>
                     } />
-                    <Route path="/manager/calendar" element={
-                        <ProtectedRoute>
-                            <ManagerDashboard />
-                        </ProtectedRoute>
-                    } />
                     <Route path="/manager/leave-requests" element={
                         <ProtectedRoute>
-                            <ManagerDashboard />
+                            <ManagerLeaveRequests />
                         </ProtectedRoute>
                     } />
-                    <Route path="/manager/team-gigs" element={
+                    <Route path="/manager/gigs" element={
                         <ProtectedRoute>
-                            <ManagerDashboard />
+                            <ManagerGigs />
                         </ProtectedRoute>
                     } />
                     <Route path="/manager/employees" element={
                         <ProtectedRoute>
-                            <ManagerDashboard />
+                            <ManagerEmployees />
                         </ProtectedRoute>
                     } />
                     <Route path="/manager/reports" element={
                         <ProtectedRoute>
-                            <ManagerDashboard />
+                            <ManagerReports />
                         </ProtectedRoute>
                     } />
                     <Route path="/manager/settings" element={
                         <ProtectedRoute>
-                            <ManagerDashboard />
+                            <ManagerSettings />
                         </ProtectedRoute>
                     } />
 

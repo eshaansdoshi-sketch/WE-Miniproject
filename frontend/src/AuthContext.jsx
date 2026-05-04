@@ -1,242 +1,138 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { supabase } from './supabaseClient'
-import { getCandidateByUserId } from './api'
 
 const AuthContext = createContext(null)
 
-// Status constants (duplicated from UserContext to avoid circular deps)
+const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+
 const STATUS = {
-    NONE: 'none',
-    UPLOADED: 'uploaded',
-    SCREENED: 'screened',
-    REJECTED: 'rejected',
-    TESTING: 'testing',
-    COMPLETE: 'complete',
+  NONE: 'none', UPLOADED: 'uploaded', SCREENED: 'screened',
+  REJECTED: 'rejected', TESTING: 'testing', COMPLETE: 'complete',
 }
 
-// Map backend status strings to frontend STATUS constants
-const mapBackendStatus = (backendStatus) => {
-    const statusMap = {
-        'applied': STATUS.UPLOADED,
-        'qualified': STATUS.SCREENED,
-        'rejected': STATUS.REJECTED,
-        'approved': STATUS.SCREENED,
-        'interview': STATUS.TESTING,
-        'hired': STATUS.COMPLETE,
-        'completed': STATUS.COMPLETE, // Added for compatibility
-        'uploaded': STATUS.UPLOADED,
-        'screened': STATUS.SCREENED,
-        'testing': STATUS.TESTING,
-        'complete': STATUS.COMPLETE,
-    }
-    return statusMap[backendStatus?.toLowerCase()] || STATUS.NONE
-}
+const mapStatus = (s) => ({
+  applied: STATUS.UPLOADED, qualified: STATUS.SCREENED, rejected: STATUS.REJECTED,
+  interview: STATUS.TESTING, hired: STATUS.COMPLETE, uploaded: STATUS.UPLOADED,
+  screened: STATUS.SCREENED, testing: STATUS.TESTING, complete: STATUS.COMPLETE,
+}[s?.toLowerCase()] || STATUS.NONE)
 
 export function AuthProvider({ children }) {
-    const [user, setUser] = useState(null)
-    const [userRole, setUserRole] = useState(null)
-    const [candidateData, setCandidateData] = useState(null)
-    const [loading, setLoading] = useState(true)
+  const [user, setUser]               = useState(null)
+  const [userRole, setUserRole]       = useState(null)
+  const [candidateData, setCandidateData] = useState(null)
+  const [loading, setLoading]         = useState(true)
 
-    // Load candidate data from backend for the authenticated user
-    const loadCandidateData = useCallback(async (userId) => {
-        if (!userId) return null
+  const getToken = () => localStorage.getItem('hirrd_token')
 
-        console.log('[AuthContext] Loading candidate data for user:', userId)
-        try {
-            const candidate = await getCandidateByUserId(userId)
-
-            if (candidate && candidate.id) {
-                console.log('[AuthContext] Found candidate:', candidate.id, 'status:', candidate.status)
-                const data = {
-                    authUserId: userId,
-                    candidateId: candidate.id,
-                    status: mapBackendStatus(candidate.status),
-                    rawStatus: candidate.status, // Keep original for display
-                    selectedRoleId: candidate.role_id || null,
-                    selectedRoleName: candidate.role_name || null, // Now from backend
-                    adminNotes: candidate.admin_notes || null, // Admin feedback
-                    qualified: candidate.qualified || null,
-                    feedback: candidate.feedback || null,
-                    finalScore: candidate.resume_score || null,
-                    appliedAt: candidate.applied_at || null,
-                }
-                setCandidateData(data)
-                return data
-            } else {
-                console.log('[AuthContext] No candidate found, treating as new applicant')
-                const data = {
-                    authUserId: userId,
-                    candidateId: null,
-                    status: STATUS.NONE,
-                    selectedRoleId: null,
-                    selectedRoleName: null,
-                }
-                setCandidateData(data)
-                return data
-            }
-        } catch (err) {
-            console.error('[AuthContext] Error loading candidate:', err)
-            const data = {
-                authUserId: userId,
-                candidateId: null,
-                status: STATUS.NONE,
-            }
-            setCandidateData(data)
-            return data
+  const loadCandidateData = useCallback(async (userId) => {
+    if (!userId) return null
+    try {
+      const token = getToken()
+      const res = await fetch(`${API}/api/candidates/by-user/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const candidate = await res.json()
+      if (candidate && candidate._id) {
+        const data = {
+          authUserId: userId, candidateId: candidate._id,
+          status: mapStatus(candidate.status), rawStatus: candidate.status,
+          selectedRoleId: candidate.roleId || null,
+          selectedRoleName: candidate.role_name || null,
+          adminNotes: candidate.adminNotes || null,
+          finalScore: candidate.resumeScore || null,
         }
-    }, [])
+        setCandidateData(data); return data
+      }
+      const empty = { authUserId: userId, candidateId: null, status: STATUS.NONE, selectedRoleId: null, selectedRoleName: null }
+      setCandidateData(empty); return empty
+    } catch {
+      const fallback = { authUserId: userId, candidateId: null, status: STATUS.NONE }
+      setCandidateData(fallback); return fallback
+    }
+  }, [])
 
-    // Clear all candidate state
-    const clearCandidateData = useCallback(() => {
-        console.log('[AuthContext] Clearing candidate data')
-        setCandidateData(null)
-        // Clear any legacy localStorage
-        localStorage.removeItem('hiring_user')
-    }, [])
-
-    useEffect(() => {
-        // Check current session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session?.user) {
-                setUser(session.user)
-                fetchUserRole(session.user.id)
-                loadCandidateData(session.user.id)
-            } else {
-                setLoading(false)
-            }
+  // Restore session from token on mount
+  useEffect(() => {
+    const restore = async () => {
+      const token = getToken()
+      if (!token) { setLoading(false); return }
+      try {
+        const res = await fetch(`${API}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` }
         })
-
-        // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            console.log('[AuthContext] Auth state changed, event:', _event)
-
-            if (session?.user) {
-                setUser(session.user)
-                fetchUserRole(session.user.id)
-                // Load candidate data for this specific user
-                loadCandidateData(session.user.id)
-            } else {
-                setUser(null)
-                setUserRole(null)
-                // Clear candidate data on logout
-                clearCandidateData()
-                setLoading(false)
-            }
-        })
-
-        return () => subscription.unsubscribe()
-    }, [loadCandidateData, clearCandidateData])
-
-    const fetchUserRole = async (userId) => {
-        try {
-            // Check user_roles table for role
-            const { data, error } = await supabase
-                .from('user_roles')
-                .select('role')
-                .eq('user_id', userId)
-                .maybeSingle()
-
-            if (data) {
-                setUserRole(data.role)
-            } else {
-                // Default to applicant if no role found
-                setUserRole('applicant')
-            }
-        } catch (err) {
-            console.error('Error fetching role:', err)
-            setUserRole('applicant')
-        } finally {
-            setLoading(false)
-        }
+        if (!res.ok) throw new Error('expired')
+        const { user: u } = await res.json()
+        setUser({ ...u, id: u.id })
+        setUserRole(u.role)
+        if (u.role === 'applicant') await loadCandidateData(u.id)
+      } catch {
+        localStorage.removeItem('hirrd_token')
+      } finally { setLoading(false) }
     }
+    restore()
+  }, [loadCandidateData])
 
-    const signUp = async (email, password) => {
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-        })
-        if (error) throw error
-        return data
-    }
+  const signUp = async (email, password, name = '', role = 'applicant') => {
+    const res = await fetch(`${API}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name || email, email, password, role }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Registration failed')
+    localStorage.setItem('hirrd_token', data.token)
+    setUser({ ...data.user, id: data.user.id })
+    setUserRole(data.user.role)
+    return data
+  }
 
-    const signIn = async (email, password) => {
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        })
-        if (error) throw error
-        return data
-    }
+  const signIn = async (email, password) => {
+    const res = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Login failed')
+    localStorage.setItem('hirrd_token', data.token)
+    setUser({ ...data.user, id: data.user.id })
+    setUserRole(data.user.role)
+    if (data.user.role === 'applicant') await loadCandidateData(data.user.id)
+    return data
+  }
 
-    const signOut = async () => {
-        // Clear candidate data BEFORE signing out
-        clearCandidateData()
+  const signOut = () => {
+    localStorage.removeItem('hirrd_token')
+    setUser(null); setUserRole(null); setCandidateData(null)
+  }
 
-        const { error } = await supabase.auth.signOut()
-        if (error) throw error
-        setUser(null)
-        setUserRole(null)
-    }
+  const updateCandidateData = (updates) => {
+    setCandidateData(prev => prev ? { ...prev, ...updates } : updates)
+  }
 
-    // Update candidate data (for use by components after resume upload, etc.)
-    const updateCandidateData = (updates) => {
-        setCandidateData(prev => {
-            if (!prev) return updates
-            return { ...prev, ...updates }
-        })
-    }
+  const resetForNewRole = () => {
+    setCandidateData(prev => {
+      if (!prev || prev.status !== STATUS.REJECTED) return prev
+      return { ...prev, selectedRoleId: null, selectedRoleName: null, candidateId: null, status: STATUS.NONE }
+    })
+  }
 
-    // Reset for new role application (rejected candidates only)
-    const resetForNewRole = () => {
-        setCandidateData(prev => {
-            if (!prev) return null
-            if (prev.status !== STATUS.REJECTED) {
-                console.warn('resetForNewRole called but status is not rejected')
-                return prev
-            }
-            return {
-                ...prev,
-                selectedRoleId: null,
-                selectedRoleName: null,
-                candidateId: null,
-                status: STATUS.NONE,
-                qualified: null,
-                feedback: null,
-                finalScore: null,
-            }
-        })
-    }
-
-    const value = {
-        user,
-        userRole,
-        loading,
-        signUp,
-        signIn,
-        signOut,
-        isAdmin: userRole === 'admin',
-        isApplicant: userRole === 'applicant',
-        // Candidate session management
-        candidateData,
-        updateCandidateData,
-        resetForNewRole,
-        loadCandidateData,
-        clearCandidateData,
-        STATUS,
-    }
-
-    return (
-        <AuthContext.Provider value={value}>
-            {children}
-        </AuthContext.Provider>
-    )
+  return (
+    <AuthContext.Provider value={{
+      user, userRole, loading,
+      signUp, signIn, signOut,
+      isAdmin: userRole === 'admin' || userRole === 'hr_admin',
+      isApplicant: userRole === 'applicant',
+      candidateData, updateCandidateData, resetForNewRole, loadCandidateData,
+      clearCandidateData: () => setCandidateData(null),
+      STATUS,
+    }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {
-    const context = useContext(AuthContext)
-    if (!context) {
-        throw new Error('useAuth must be used within AuthProvider')
-    }
-    return context
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
+  return ctx
 }

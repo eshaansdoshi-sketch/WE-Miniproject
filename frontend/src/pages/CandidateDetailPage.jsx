@@ -1,298 +1,226 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getAdminCandidateDetails, updateCandidateStatus } from '../api'
-import LoadingSpinner from '../components/ui/LoadingSpinner'
+import DashboardLayout from '../components/layout/DashboardLayout'
+import { Users, FileText, ArrowLeft, CheckCircle, XCircle, Award, Briefcase } from 'lucide-react'
+
+// ── Hardcoded candidate details ──────────────────────────────
+const CANDIDATE_DB = {
+    c001: {
+        id: 'c001', name: 'Arjun Mehta', email: 'arjun@gmail.com', experience_level: 'Senior',
+        status: 'qualified', resume_score: 87,
+        experience_summary: 'Full-stack developer with 6+ years of experience in React, Node.js, and MongoDB. Built scalable SaaS platforms serving 50K+ users. Led a team of 4 engineers at TechCorp.',
+        skills: ['React', 'Node.js', 'MongoDB', 'TypeScript', 'Docker', 'AWS', 'GraphQL', 'REST APIs'],
+        role: { role_name: 'Senior Full-Stack Developer' },
+        applied_at: '2026-04-28T10:30:00',
+        test_results: [
+            { test_id: 'react_v1', score: 85, total_questions: 5, submitted_at: '2026-04-29T14:00:00' },
+            { test_id: 'nodejs_v1', score: 80, total_questions: 5, submitted_at: '2026-04-29T14:30:00' },
+        ],
+        total_test_score: 82,
+        evaluation: { qualified: true, matched_skills: ['React', 'Node.js', 'MongoDB', 'TypeScript', 'REST APIs'], missing_skills: [] },
+    },
+    c002: {
+        id: 'c002', name: 'Priya Sharma', email: 'priya@gmail.com', experience_level: 'Mid',
+        status: 'interview', resume_score: 72,
+        experience_summary: 'ML engineer with 3 years experience in NLP and computer vision. Published 2 papers on transformer architectures.',
+        skills: ['Python', 'TensorFlow', 'PyTorch', 'Scikit-learn', 'SQL', 'NLP'],
+        role: { role_name: 'ML Engineer' },
+        applied_at: '2026-04-25T09:00:00',
+        test_results: [{ test_id: 'python_v1', score: 70, total_questions: 5, submitted_at: '2026-04-26T11:00:00' }],
+        total_test_score: 68,
+        evaluation: { qualified: true, matched_skills: ['Python', 'TensorFlow', 'Scikit-learn', 'SQL'], missing_skills: [] },
+    },
+    c003: {
+        id: 'c003', name: 'David Wilson', email: 'david@gmail.com', experience_level: 'Junior',
+        status: 'rejected', resume_score: 45,
+        experience_summary: 'Recent grad with basic knowledge of Linux and networking. Completed a Docker course online.',
+        skills: ['Linux', 'Docker basics'],
+        role: { role_name: 'DevOps Engineer' },
+        applied_at: '2026-04-27T16:00:00',
+        test_results: [],
+        total_test_score: null,
+        evaluation: { qualified: false, matched_skills: ['Docker'], missing_skills: ['Kubernetes', 'CI/CD', 'Terraform', 'Linux (advanced)'] },
+    },
+}
+
+// Fallback candidate for unknown IDs
+const FALLBACK = {
+    id: 'unknown', name: 'Sample Candidate', email: 'sample@gmail.com', experience_level: 'Mid',
+    status: 'applied', resume_score: 65,
+    experience_summary: 'Experienced professional with a broad skill set in software development.',
+    skills: ['JavaScript', 'Python', 'SQL'],
+    role: { role_name: 'General Application' },
+    applied_at: '2026-05-01T12:00:00',
+    test_results: [], total_test_score: null,
+    evaluation: { qualified: false, matched_skills: ['JavaScript'], missing_skills: ['React', 'Node.js'] },
+}
 
 function CandidateDetailPage() {
     const { candidateId } = useParams()
     const navigate = useNavigate()
 
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState(null)
-    const [candidate, setCandidate] = useState(null)
-    const [role, setRole] = useState(null)
-    const [testResults, setTestResults] = useState([])
-    const [totalTestScore, setTotalTestScore] = useState(null)
-    const [evaluation, setEvaluation] = useState(null)
+    const candidate = CANDIDATE_DB[candidateId] || { ...FALLBACK, id: candidateId }
+    const role = candidate.role
+    const testResults = candidate.test_results
+    const totalTestScore = candidate.total_test_score
+    const evaluation = candidate.evaluation
 
-    const [notes, setNotes] = useState('')
-    const [updating, setUpdating] = useState(false)
+    const [notes, setNotes] = useState(candidate.admin_notes || '')
+    const [currentStatus, setCurrentStatus] = useState(candidate.status)
     const [updateSuccess, setUpdateSuccess] = useState(null)
 
-    useEffect(() => {
-        loadCandidateDetails()
-    }, [candidateId])
-
-    const loadCandidateDetails = async () => {
-        setLoading(true)
-        setError(null)
-
-        try {
-            const data = await getAdminCandidateDetails(candidateId)
-
-            if (data.success) {
-                setCandidate(data.candidate)
-                setRole(data.role)
-                setTestResults(data.test_results || [])
-                setTotalTestScore(data.total_test_score)
-                setEvaluation(data.evaluation)
-                setNotes(data.candidate?.admin_notes || '')
-            } else {
-                setError(data.detail || data.error || 'Failed to load candidate')
-            }
-        } catch (err) {
-            setError('Failed to load candidate: ' + err.message)
-        } finally {
-            setLoading(false)
-        }
+    const handleStatusUpdate = (newStatus) => {
+        setCurrentStatus(newStatus)
+        setUpdateSuccess(`Status updated to "${newStatus}"`)
+        setTimeout(() => setUpdateSuccess(null), 3000)
     }
 
-    const handleStatusUpdate = async (newStatus) => {
-        setUpdating(true)
-        setUpdateSuccess(null)
-
-        try {
-            const data = await updateCandidateStatus(candidateId, newStatus, notes)
-
-            if (data.success) {
-                setUpdateSuccess(`Status updated to "${newStatus}"`)
-                setCandidate(prev => ({ ...prev, status: newStatus, admin_notes: notes }))
-            } else {
-                setError(data.detail || data.error || 'Failed to update status')
-            }
-        } catch (err) {
-            setError('Failed to update: ' + err.message)
-        } finally {
-            setUpdating(false)
-        }
-    }
-
-    const getStatusColor = (status) => {
-        const colors = {
-            applied: '#2196f3',
-            qualified: '#4caf50',
-            rejected: '#f44336',
-            approved: '#8bc34a',
-            interview: '#ff9800',
-            hired: '#9c27b0',
-        }
-        return colors[status] || '#666'
-    }
-
-    if (loading) {
-        return (
-            <div style={{ textAlign: 'center', marginTop: 50 }}>
-                <h1>Candidate Details</h1>
-                <LoadingSpinner />
-                <p style={{ marginTop: 20 }}>Loading candidate data...</p>
-            </div>
-        )
-    }
-
-    if (error && !candidate) {
-        return (
-            <div>
-                <h1>Candidate Details</h1>
-                <p className="error">{error}</p>
-                <button onClick={() => navigate('/admin')}>← Back to Dashboard</button>
-            </div>
-        )
-    }
+    const getStatusColor = (status) => ({
+        applied: '#3b82f6', qualified: '#10b981', rejected: '#ef4444',
+        approved: '#8bc34a', interview: '#f59e0b', hired: '#8b5cf6',
+    }[status] || '#666')
 
     return (
-        <div>
-            <button onClick={() => navigate('/admin')} style={{ marginBottom: 20 }}>
-                ← Back to Dashboard
-            </button>
+        <DashboardLayout
+            title="Candidate Review"
+            subtitle={`Reviewing ${candidate.name}`}
+            sidebarTitle="Admin Console"
+            menuItems={[
+                { label: 'Dashboard', path: '/admin', icon: Users },
+                { label: 'Reports', path: '/admin/reports', icon: FileText },
+            ]}
+        >
+            <div style={{ maxWidth: '900px' }}>
+                <button onClick={() => navigate('/admin/reports')} className="btn btn-secondary mb-6"
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <ArrowLeft size={16} /> Back to Reports
+                </button>
 
-            <h1>Candidate Review</h1>
-
-            {/* Candidate Header */}
-            <div style={{ padding: 20, background: '#f5f5f5', borderRadius: 8, marginBottom: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                {/* Candidate Header */}
+                <div className="card" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <h2 style={{ margin: 0 }}>{candidate?.email || 'Anonymous Candidate'}</h2>
-                        <p style={{ margin: '5px 0', color: '#666' }}>
-                            Experience: <strong>{candidate?.experience_level || 'N/A'}</strong>
-                        </p>
-                        {role && (
-                            <p style={{ margin: '5px 0', color: '#666' }}>
-                                Applied for: <strong>{role.role_name}</strong>
-                            </p>
-                        )}
+                        <h2 style={{ margin: 0 }}>{candidate.name}</h2>
+                        <p style={{ margin: '5px 0', color: '#64748b' }}>{candidate.email} • Experience: <strong>{candidate.experience_level}</strong></p>
+                        {role && <p style={{ margin: '5px 0', color: '#64748b' }}>Applied for: <strong>{role.role_name}</strong></p>}
                     </div>
-                    <div
-                        style={{
-                            padding: '8px 16px',
-                            background: getStatusColor(candidate?.status),
-                            color: '#fff',
-                            borderRadius: 20,
-                            fontWeight: 'bold',
-                            textTransform: 'uppercase',
-                        }}
-                    >
-                        {candidate?.status || 'applied'}
+                    <div style={{
+                        padding: '8px 16px', background: getStatusColor(currentStatus),
+                        color: '#fff', borderRadius: 20, fontWeight: 'bold', textTransform: 'uppercase',
+                    }}>
+                        {currentStatus}
                     </div>
                 </div>
-            </div>
 
-            {/* Resume Summary */}
-            <div style={{ marginBottom: 20 }}>
-                <h3>Resume Summary</h3>
-                <div style={{ padding: 15, background: '#e3f2fd', borderRadius: 8 }}>
-                    <p><strong>Resume Score:</strong> {candidate?.resume_score || 0}/100</p>
-                    <p style={{ whiteSpace: 'pre-wrap' }}>
-                        {candidate?.experience_summary || 'No summary available'}
-                    </p>
+                {/* Resume Summary */}
+                <div className="card" style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Award size={20} color="#6366f1" /> Resume Summary
+                    </h3>
+                    <div style={{ padding: '1rem', background: '#eff6ff', borderRadius: '12px' }}>
+                        <p style={{ margin: '0 0 0.5rem 0' }}><strong>Resume Score:</strong> {candidate.resume_score}/100</p>
+                        <p style={{ margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{candidate.experience_summary}</p>
+                    </div>
                 </div>
-            </div>
 
-            {/* Skills */}
-            <div style={{ marginBottom: 20 }}>
-                <h3>Extracted Skills</h3>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {candidate?.skills?.length > 0 ? (
-                        candidate.skills.map((skill, idx) => (
-                            <span
-                                key={idx}
-                                style={{
-                                    padding: '4px 12px',
-                                    background: '#e0e0e0',
-                                    borderRadius: 16,
-                                    fontSize: 14,
-                                }}
-                            >
-                                {skill}
-                            </span>
-                        ))
+                {/* Skills */}
+                <div className="card" style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{ margin: '0 0 0.75rem 0' }}>Extracted Skills</h3>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        {candidate.skills.map((skill, idx) => (
+                            <span key={idx} className="badge badge-purple">{skill}</span>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Test Results */}
+                <div className="card" style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{ margin: '0 0 0.75rem 0' }}>Test Results</h3>
+                    {testResults.length > 0 ? (
+                        <>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '1px solid var(--border-light)', textAlign: 'left' }}>
+                                        <th style={{ padding: '10px' }}>Test</th>
+                                        <th style={{ padding: '10px' }}>Score</th>
+                                        <th style={{ padding: '10px' }}>Questions</th>
+                                        <th style={{ padding: '10px' }}>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {testResults.map((r, idx) => (
+                                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                            <td style={{ padding: '10px' }}>{r.test_id.replace(/_/g, ' ')}</td>
+                                            <td style={{ padding: '10px', fontWeight: '600' }}>{r.score}%</td>
+                                            <td style={{ padding: '10px' }}>{r.total_questions}</td>
+                                            <td style={{ padding: '10px', color: '#64748b' }}>
+                                                {new Date(r.submitted_at).toLocaleDateString()}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            {totalTestScore !== null && (
+                                <p style={{ marginTop: 10, fontWeight: '600' }}>Average Test Score: {totalTestScore}%</p>
+                            )}
+                        </>
                     ) : (
-                        <span style={{ color: '#666' }}>No skills extracted</span>
+                        <p style={{ color: '#94a3b8' }}>No tests taken yet</p>
                     )}
                 </div>
-            </div>
 
-            {/* Test Results */}
-            <div style={{ marginBottom: 20 }}>
-                <h3>Test Results</h3>
-                {testResults.length > 0 ? (
-                    <>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Test</th>
-                                    <th>Score</th>
-                                    <th>Questions</th>
-                                    <th>Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {testResults.map((result, idx) => (
-                                    <tr key={idx}>
-                                        <td>{result.test_id}</td>
-                                        <td><strong>{result.score}%</strong></td>
-                                        <td>{result.total_questions}</td>
-                                        <td>{result.submitted_at ? new Date(result.submitted_at).toLocaleDateString() : '-'}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                        {totalTestScore !== null && (
-                            <p style={{ marginTop: 10 }}>
-                                <strong>Average Test Score: {totalTestScore}%</strong>
+                {/* Evaluation */}
+                {evaluation && (
+                    <div className="card" style={{ marginBottom: '1.5rem' }}>
+                        <h3 style={{ margin: '0 0 0.75rem 0' }}>Qualification Evaluation</h3>
+                        <div style={{ padding: '1rem', background: evaluation.qualified ? '#dcfce7' : '#fee2e2', borderRadius: '12px' }}>
+                            <p style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}>
+                                {evaluation.qualified ? <><CheckCircle size={18} color="#16a34a" /> Qualified</> : <><XCircle size={18} color="#dc2626" /> Not Qualified</>}
                             </p>
-                        )}
-                    </>
-                ) : (
-                    <p style={{ color: '#666' }}>No tests taken yet</p>
-                )}
-            </div>
-
-            {/* Evaluation Result */}
-            {evaluation && (
-                <div style={{ marginBottom: 20 }}>
-                    <h3>Qualification Evaluation</h3>
-                    <div style={{ padding: 15, background: evaluation.qualified ? '#e8f5e9' : '#ffebee', borderRadius: 8 }}>
-                        <p>
-                            <strong>Status:</strong>{' '}
-                            {evaluation.qualified ? '✓ Qualified' : '✗ Not Qualified'}
-                        </p>
-                        {evaluation.matched_skills?.length > 0 && (
-                            <p>
-                                <strong>Matched Skills:</strong> {evaluation.matched_skills.join(', ')}
-                            </p>
-                        )}
-                        {evaluation.missing_skills?.length > 0 && (
-                            <p>
-                                <strong>Missing Skills:</strong> {evaluation.missing_skills.join(', ')}
-                            </p>
-                        )}
+                            {evaluation.matched_skills?.length > 0 && (
+                                <p><strong>Matched:</strong> {evaluation.matched_skills.join(', ')}</p>
+                            )}
+                            {evaluation.missing_skills?.length > 0 && (
+                                <p><strong>Missing:</strong> {evaluation.missing_skills.join(', ')}</p>
+                            )}
+                        </div>
                     </div>
+                )}
+
+                {/* Admin Notes */}
+                <div className="card" style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{ margin: '0 0 0.75rem 0' }}>Admin Notes</h3>
+                    <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Add notes about this candidate..."
+                        style={{ width: '100%', minHeight: 80, padding: 10, borderRadius: 8, border: '1px solid #e2e8f0', resize: 'vertical' }} />
                 </div>
-            )}
 
-            {/* Admin Notes */}
-            <div style={{ marginBottom: 20 }}>
-                <h3>Admin Notes</h3>
-                <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add notes about this candidate..."
-                    style={{
-                        width: '100%',
-                        minHeight: 100,
-                        padding: 10,
-                        borderRadius: 8,
-                        border: '1px solid #ddd',
-                        resize: 'vertical',
-                    }}
-                />
-            </div>
+                {/* Action Buttons */}
+                <div className="card">
+                    <h3 style={{ margin: '0 0 0.75rem 0' }}>Update Status</h3>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        {[
+                            { s: 'approved', label: '✓ Approve', bg: '#10b981' },
+                            { s: 'rejected', label: '✗ Reject', bg: '#ef4444' },
+                            { s: 'interview', label: '📅 Interview', bg: '#f59e0b' },
+                            { s: 'hired', label: '🎉 Hire', bg: '#8b5cf6' },
+                        ].map(btn => (
+                            <button key={btn.s} onClick={() => handleStatusUpdate(btn.s)}
+                                className="btn" style={{ background: btn.bg, color: 'white' }}>
+                                {btn.label}
+                            </button>
+                        ))}
+                    </div>
+                    {updateSuccess && (
+                        <p style={{ marginTop: 12, color: '#16a34a', fontWeight: '600' }}>✓ {updateSuccess}</p>
+                    )}
+                </div>
 
-            {/* Action Buttons */}
-            <div style={{ marginBottom: 20 }}>
-                <h3>Update Status</h3>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    <button
-                        onClick={() => handleStatusUpdate('approved')}
-                        disabled={updating}
-                        style={{ background: '#4caf50' }}
-                    >
-                        ✓ Approve
-                    </button>
-                    <button
-                        onClick={() => handleStatusUpdate('rejected')}
-                        disabled={updating}
-                        style={{ background: '#f44336' }}
-                    >
-                        ✗ Reject
-                    </button>
-                    <button
-                        onClick={() => handleStatusUpdate('interview')}
-                        disabled={updating}
-                        style={{ background: '#ff9800' }}
-                    >
-                        📅 Move to Interview
-                    </button>
-                    <button
-                        onClick={() => handleStatusUpdate('hired')}
-                        disabled={updating}
-                        style={{ background: '#9c27b0' }}
-                    >
-                        🎉 Mark as Hired
-                    </button>
+                <div style={{ marginTop: 20, paddingTop: 15, borderTop: '1px solid #e2e8f0', fontSize: 12, color: '#94a3b8' }}>
+                    <p>Candidate ID: {candidate.id}</p>
+                    <p>Applied: {new Date(candidate.applied_at).toLocaleString()}</p>
                 </div>
             </div>
-
-            {/* Feedback Messages */}
-            {error && <p className="error">{error}</p>}
-            {updateSuccess && <p className="success">{updateSuccess}</p>}
-
-            {/* Metadata */}
-            <div style={{ marginTop: 30, paddingTop: 20, borderTop: '1px solid #ddd', fontSize: 12, color: '#666' }}>
-                <p>Candidate ID: {candidate?.id}</p>
-                <p>Applied: {candidate?.applied_at ? new Date(candidate.applied_at).toLocaleString() : 'Unknown'}</p>
-            </div>
-        </div>
+        </DashboardLayout>
     )
 }
 

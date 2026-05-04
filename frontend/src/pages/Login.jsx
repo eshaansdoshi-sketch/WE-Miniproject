@@ -3,7 +3,6 @@ import { motion } from 'framer-motion'
 import { useNavigate, Link } from 'react-router-dom'
 import { LogIn, Sparkles, Shield, Brain, Users } from 'lucide-react'
 import { useAuth } from '../AuthContext'
-import { supabase } from '../supabaseClient'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import BackgroundPaths from '../components/ui/background-paths'
 import './Login.css'
@@ -49,52 +48,22 @@ const Login = () => {
         setError(null)
 
         try {
-            // 1. Sign in with Supabase
-            const { data, error: signInError } = await signIn(email, password)
+            const result = await signIn(email, password)
 
-            if (signInError) throw signInError
-            if (!data?.user?.id) throw new Error('Login failed')
+            if (!result?.user?.id) throw new Error('Login failed')
 
-            // 2. Fetch actual role from DB
-            const { data: roleData, error: roleError } = await supabase
-                .from('user_roles')
-                .select('role')
-                .eq('user_id', data.user.id)
-                .single()
+            const actualRole = result.user.role || 'applicant'
 
-            // Default to applicant if no role found (or error)
-            const actualRole = roleData?.role || 'applicant'
-            console.log('Login successful. DB Role:', actualRole)
-
-            // 3. Navigate based on DB Role (Source of Truth)
             switch (actualRole) {
                 case 'admin':
-                case 'hr_admin': // Handle potential alternative role name
+                case 'hr_admin':
                     navigate('/admin')
                     break
                 case 'manager':
                     navigate('/manager')
                     break
-                case 'employee':
-                    navigate('/employee')
-                    break
                 case 'applicant':
-                    // Check if candidate has already applied
-                    const { data: candidate } = await supabase
-                        .from('candidates')
-                        .select('id, role_id')
-                        .eq('user_id', data.user.id)
-                        .maybeSingle()
-
-                    if (candidate && candidate.role_id) {
-                        navigate('/applicant/dashboard')
-                    } else {
-                        navigate('/applicant')
-                    }
-                    break
                 default:
-                    // If role is unknown, default to applicant if it looks like one, or dashboard
-                    console.warn('Unknown role:', actualRole)
                     navigate('/applicant/dashboard')
                     break
             }

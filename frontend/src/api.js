@@ -1,192 +1,151 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
-// Helper with timeout
-async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+const getToken = () => localStorage.getItem('hirrd_token');
 
-    try {
-        const response = await fetch(url, {
-            ...options,
-            signal: controller.signal,
-        });
-        return response;
-    } finally {
-        clearTimeout(timeout);
-    }
-}
-
-export async function processResume(file, userId, roleId, email = null) {
-    // Debug logging
-    console.log('=== PROCESS RESUME DEBUG ===');
-    console.log('Sending user_id:', userId);
-    console.log('Sending role_id:', roleId);
-    console.log('Sending email:', email);
-    console.log('File:', file?.name, file?.size, 'bytes');
-    console.log('============================');
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('user_id', userId);
-    formData.append('role_id', roleId);
-    if (email) {
-        formData.append('email', email);
-    }
-
-    const response = await fetchWithTimeout(`${API_BASE}/process-resume`, {
-        method: 'POST',
-        body: formData,
-    }, 60000); // 60 second timeout for resume processing
-
-    const data = await response.json();
-    console.log('Process resume response:', data);
-    return data;
-}
-
-// =============================================================================
-// TASK & SCHEDULE API
-// =============================================================================
-
-// Tasks
-export async function createTask(taskData) {
-    const response = await fetchWithTimeout(`${API_BASE}/tasks`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(taskData),
+// ── Core fetch helpers ───────────────────────────────────────
+async function apiFetch(path, options = {}, timeoutMs = 30000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${getToken()}`,
+      },
     });
-    return response.json();
+    return res;
+  } finally { clearTimeout(timer); }
 }
 
-export async function getUserTasks(userId) {
-    const response = await fetchWithTimeout(`${API_BASE}/tasks/${userId}`);
-    return response.json();
+async function apiJSON(path, options = {}, timeoutMs = 30000) {
+  const res = await apiFetch(path, options, timeoutMs);
+  return res.json();
 }
 
-export async function getCreatedTasks(managerId) {
-    const response = await fetchWithTimeout(`${API_BASE}/admin/tasks/created/${managerId}`);
-    return response.json();
+// ── Resume / Candidate ───────────────────────────────────────
+export async function processResume(file, userId, roleId) {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('user_id', userId);
+  form.append('role_id', roleId);
+  const res = await apiFetch('/api/candidates/process-resume', { method: 'POST', body: form }, 60000);
+  return res.json();
 }
-
-export async function updateTaskStatus(taskId, status) {
-    const response = await fetchWithTimeout(`${API_BASE}/tasks/${taskId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-    });
-    return response.json();
-}
-
-// Schedules
-export async function createSchedule(scheduleData) {
-    const response = await fetchWithTimeout(`${API_BASE}/schedules`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(scheduleData),
-    });
-    return response.json();
-}
-
-export async function getUserSchedules(userId) {
-    const response = await fetchWithTimeout(`${API_BASE}/schedules/${userId}`);
-    return response.json();
-}
-
-export async function getTeamSchedules(managerId) {
-    const response = await fetchWithTimeout(`${API_BASE}/schedules/team/${managerId}`);
-    return response.json();
-}
-
-// Notifications
-export async function getUserNotifications(userId) {
-    const response = await fetchWithTimeout(`${API_BASE}/notifications/${userId}`);
-    return response.json();
-}
-
-// Users & Profiles
-export async function getProfiles(role = null) {
-    const url = role ? `${API_BASE}/profiles?role=${role}` : `${API_BASE}/profiles`;
-    const response = await fetchWithTimeout(url);
-    return response.json();
-}
-
-// =============================================================================
-// RESUME & CANDIDATE API (Existing)
-// =============================================================================
-
 
 export async function screenCandidate(candidateId, roleId) {
-    const response = await fetchWithTimeout(`${API_BASE}/screen-candidate/${candidateId}/${roleId}`, {
-        method: 'POST',
-    }, 30000);
-    return response.json();
+  return apiJSON(`/api/candidates/screen/${candidateId}/${roleId}`, { method: 'POST' }, 30000);
 }
 
 export async function getCandidateTests(candidateId, roleId) {
-    const response = await fetchWithTimeout(`${API_BASE}/candidate-tests/${candidateId}/${roleId}`, {}, 120000); // 120s timeout for generation
-    return response.json();
+  return apiJSON(`/api/candidates/tests/${candidateId}/${roleId}`, {}, 120000);
 }
 
 export async function submitTest(candidateId, testId, answers) {
-    const response = await fetchWithTimeout(`${API_BASE}/submit-test/${candidateId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ test_id: testId, answers }),
-    }, 30000);
-    return response.json();
+  return apiJSON(`/api/candidates/submit-test/${candidateId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ test_id: testId, answers }),
+  }, 30000);
 }
 
-export async function getHRCandidateSummary() {
-    const response = await fetchWithTimeout(`${API_BASE}/hr/candidate-summary`, {}, 15000);
-    return response.json();
+export async function getCandidateByUserId(userId) {
+  return apiJSON(`/api/candidates/by-user/${userId}`, {}, 10000);
 }
 
+export async function getCandidateFeedback(candidateId) {
+  return apiJSON(`/api/candidates/feedback/${candidateId}`, {}, 30000);
+}
+
+// ── Job Roles ────────────────────────────────────────────────
 export async function getJobRoles() {
-    const response = await fetchWithTimeout(`${API_BASE}/job-roles`, {
-        headers: { 'Accept': 'application/json' }
-    }, 10000);
-    return response.json();
-}
-
-export async function assignTests(candidateId, roleId) {
-    // Assigns tests based on job role's required_skills (role-driven)
-    const response = await fetchWithTimeout(`${API_BASE}/assign-tests/${candidateId}/${roleId}`, {
-        method: 'POST',
-    }, 120000); // 2 minute timeout for AI test generation
-    return response.json();
+  return apiJSON('/api/job-roles', {}, 10000);
 }
 
 export async function createJobRole(roleData) {
-    const response = await fetchWithTimeout(`${API_BASE}/job-role`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(roleData),
-    }, 15000);
-    return response.json();
+  return apiJSON('/api/job-roles', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(roleData),
+  }, 15000);
 }
 
-// =============================================================================
-// ADMIN API FUNCTIONS
-// =============================================================================
+// ── Tasks ────────────────────────────────────────────────────
+export async function createTask(taskData) {
+  return apiJSON('/api/tasks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(taskData),
+  });
+}
+
+export async function getUserTasks(userId) {
+  return apiJSON(`/api/tasks/user/${userId}`);
+}
+
+export async function getCreatedTasks(managerId) {
+  return apiJSON(`/api/tasks/created/${managerId}`);
+}
+
+export async function updateTaskStatus(taskId, status) {
+  return apiJSON(`/api/tasks/${taskId}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+}
+
+// ── Schedules ────────────────────────────────────────────────
+export async function createSchedule(scheduleData) {
+  return apiJSON('/api/schedules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(scheduleData),
+  });
+}
+
+export async function getUserSchedules(userId) {
+  return apiJSON(`/api/schedules/user/${userId}`);
+}
+
+export async function getTeamSchedules(managerId) {
+  return apiJSON(`/api/schedules/team/${managerId}`);
+}
+
+// ── Notifications ────────────────────────────────────────────
+export async function getUserNotifications(userId) {
+  return apiJSON(`/api/notifications/${userId}`);
+}
+
+// ── Profiles ─────────────────────────────────────────────────
+export async function getProfiles(role = null) {
+  const url = role ? `/api/profiles?role=${role}` : '/api/profiles';
+  return apiJSON(url);
+}
+
+// ── Admin ────────────────────────────────────────────────────
+export async function getHRCandidateSummary() {
+  return apiJSON('/api/admin/candidate-summary', {}, 15000);
+}
 
 export async function getAdminCandidateDetails(candidateId) {
-    const response = await fetchWithTimeout(`${API_BASE}/admin/candidate/${candidateId}`, {}, 15000);
-    return response.json();
+  return apiJSON(`/api/admin/candidates/${candidateId}`, {}, 15000);
 }
 
 export async function updateCandidateStatus(candidateId, status, notes = null) {
-    const response = await fetchWithTimeout(`${API_BASE}/admin/candidate-status/${candidateId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, notes }),
-    }, 15000);
-    return response.json();
+  return apiJSON(`/api/admin/candidates/${candidateId}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, notes }),
+  }, 15000);
 }
 
-// =============================================================================
-// CANDIDATE SESSION API
-// =============================================================================
+// ── Skill Paths (new) ────────────────────────────────────────
+export async function getSkillPath(candidateId) {
+  return apiJSON(`/api/skill-paths/${candidateId}`, {}, 60000);
+}
 
-export async function getCandidateByUserId(userId) {
-    const response = await fetchWithTimeout(`${API_BASE}/candidate/by-user/${userId}`, {}, 10000);
-    return response.json();
+export async function regenerateSkillPath(candidateId) {
+  return apiJSON(`/api/skill-paths/regenerate/${candidateId}`, { method: 'POST' }, 60000);
 }

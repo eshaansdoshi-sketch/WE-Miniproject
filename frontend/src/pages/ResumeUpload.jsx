@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
-import { processResume } from '../api'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import DashboardLayout from '../components/layout/DashboardLayout'
 import {
@@ -52,50 +51,21 @@ function ResumeUpload() {
         { label: 'My Profile', path: '/applicant/profile', icon: User },
     ]
 
-    const handleUpload = async () => {
+    const handleUpload = () => {
         if (!file) return
 
         setLoading(true)
         setError(null)
 
-        try {
-            const data = await processResume(file, authUser.id, candidateData.selectedRoleId, authUser.email)
-
-            if (data.success && data.candidate_id) {
-                updateCandidateData({
-                    candidateId: data.candidate_id,
-                    status: STATUS.UPLOADED,
-                })
-                navigate('/applicant/screen')
-            } else {
-                if (data.error && (
-                    data.error.includes("already applied") ||
-                    data.error.includes("already completed") ||
-                    data.error.includes("previously rejected")
-                )) {
-                    setError(data.error)
-                    if (data.existing_candidate_id) {
-                        updateCandidateData({
-                            candidateId: data.existing_candidate_id,
-                            status: mapBackendStatus(data.current_status || 'applied', STATUS),
-                        })
-                        setTimeout(() => {
-                            if (data.error.includes("already completed")) {
-                                navigate('/applicant')
-                            } else {
-                                navigate('/applicant/screen')
-                            }
-                        }, 2000)
-                    }
-                } else {
-                    setError(data.error || 'Failed to process resume')
-                }
-            }
-        } catch (err) {
-            setError(err.message)
-        } finally {
+        // Simulate AI processing with a delay
+        setTimeout(() => {
+            updateCandidateData({
+                candidateId: 'demo_candidate_' + Date.now(),
+                status: STATUS.UPLOADED,
+            })
             setLoading(false)
-        }
+            navigate('/applicant/screen')
+        }, 1500)
     }
 
     const handleDrag = useCallback((e) => {

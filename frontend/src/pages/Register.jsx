@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../AuthContext'
-import { supabase } from '../supabaseClient'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import BackgroundPaths from '../components/ui/background-paths'
 import { Shield, Brain, Users, User, ArrowLeft } from 'lucide-react'
@@ -74,41 +73,8 @@ const Register = () => {
         setError(null)
 
         try {
-            const { data, error: signUpError } = await signUp(email, password)
-            if (signUpError) throw signUpError
-
-            if (data.user) {
-                // Ensure role is valid for database enum
-                const roleEnum = ['admin', 'manager', 'employee', 'applicant'];
-                let roleToInsert = selectedRole === 'hr_admin' ? 'admin' : selectedRole;
-
-                if (!roleEnum.includes(roleToInsert)) {
-                    console.warn(`Invalid role ${roleToInsert}, defaulting to applicant`);
-                    roleToInsert = 'applicant';
-                }
-
-                console.log(`Creating user with role: ${roleToInsert}`);
-
-                // Insert into user_roles
-                const { error: roleError } = await supabase.from('user_roles').insert({
-                    user_id: data.user.id,
-                    role: roleToInsert,
-                });
-                if (roleError) console.error('Error inserting user_role:', roleError);
-
-                // Insert into profiles
-                const { error: profileError } = await supabase.from('profiles').insert({
-                    id: data.user.id,
-                    email: email,
-                    full_name: fullName,
-                    role: roleToInsert,
-                    avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random`
-                });
-                if (profileError) console.error('Error inserting profile:', profileError);
-
-                setSuccess(true)
-            }
-
+            await signUp(email, password, fullName, selectedRole)
+            setSuccess(true)
         } catch (err) {
             setError(err.message)
         } finally {
