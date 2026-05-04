@@ -29,13 +29,6 @@ const Register = () => {
             gradient: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
         },
         {
-            id: 'employee',
-            name: 'Employee',
-            icon: Brain,
-            description: 'Manage tasks & schedule',
-            gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-        },
-        {
             id: 'manager',
             name: 'Manager',
             icon: Users,

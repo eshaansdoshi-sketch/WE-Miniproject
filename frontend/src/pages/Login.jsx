@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogIn, Sparkles, Shield, Brain, Users } from 'lucide-react'
+import { LogIn, Sparkles, Shield, Users, User } from 'lucide-react'
 import { useAuth } from '../AuthContext'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import BackgroundPaths from '../components/ui/background-paths'
@@ -9,17 +9,19 @@ import './Login.css'
 
 const Login = () => {
     const navigate = useNavigate()
-    const { signIn } = useAuth()
+    const { signIn, signUp } = useAuth()
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [fullName, setFullName] = useState('')
     const [loading, setLoading] = useState(false)
     const [selectedRole, setSelectedRole] = useState(null)
     const [error, setError] = useState(null)
+    const [isNewUser, setIsNewUser] = useState(false)
 
     const roles = [
         {
-            id: 'hr_admin',
+            id: 'admin',
             name: 'HR / Admin',
             icon: Shield,
             description: 'Manage hiring, policies & insights',
@@ -33,44 +35,74 @@ const Login = () => {
             gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
         },
         {
-            id: 'employee',
-            name: 'Employee',
-            icon: Brain,
-            description: 'Tasks, leave & feedback',
-            gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+            id: 'applicant',
+            name: 'Candidate',
+            icon: User,
+            description: 'Apply for jobs & track status',
+            gradient: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
         },
     ]
 
-    const handleLogin = async (e) => {
+    const navigateByRole = (role) => {
+        switch (role) {
+            case 'admin':
+            case 'hr_admin':
+                navigate('/admin')
+                break
+            case 'manager':
+                navigate('/manager')
+                break
+            case 'applicant':
+            default:
+                navigate('/applicant/dashboard')
+                break
+        }
+    }
+
+    const handleSubmit = async (e) => {
         e.preventDefault()
+
+        if (!selectedRole) {
+            setError('Please select your role first.')
+            return
+        }
 
         setLoading(true)
         setError(null)
 
         try {
-            const result = await signIn(email, password)
-
-            if (!result?.user?.id) throw new Error('Login failed')
-
-            const actualRole = result.user.role || 'applicant'
-
-            switch (actualRole) {
-                case 'admin':
-                case 'hr_admin':
-                    navigate('/admin')
-                    break
-                case 'manager':
-                    navigate('/manager')
-                    break
-                case 'applicant':
-                default:
-                    navigate('/applicant/dashboard')
-                    break
+            if (isNewUser) {
+                // Register flow
+                if (!fullName.trim()) {
+                    setError('Please enter your full name.')
+                    setLoading(false)
+                    return
+                }
+                const result = await signUp(email, password, fullName, selectedRole)
+                navigateByRole(result.user.role)
+            } else {
+                // Login flow — try login first, if fails offer to create account
+                try {
+                    const result = await signIn(email, password)
+                    if (!result?.user?.id) throw new Error('Login failed')
+                    navigateByRole(result.user.role)
+                } catch (loginErr) {
+                    // If user not found, switch to register mode
+                    if (loginErr.message?.toLowerCase().includes('not found') ||
+                        loginErr.message?.toLowerCase().includes('no user') ||
+                        loginErr.message?.toLowerCase().includes('invalid credentials') ||
+                        loginErr.message?.toLowerCase().includes('invalid email')) {
+                        setIsNewUser(true)
+                        setError('No account found. Fill in your name below to create one.')
+                        setLoading(false)
+                        return
+                    }
+                    throw loginErr
+                }
             }
-
         } catch (err) {
-            console.error('Login error:', err)
-            setError(err.message || 'Login failed')
+            console.error('Auth error:', err)
+            setError(err.message || 'Authentication failed')
         } finally {
             setLoading(false)
         }
@@ -97,19 +129,19 @@ const Login = () => {
                     </motion.div>
 
                     <h1 className="brand-title">
-                        <span className="gradient-text" style={{ background: 'linear-gradient(90deg, #6366f1, #06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>PeoplePilot AI</span>
+                        <span className="gradient-text" style={{ background: 'linear-gradient(90deg, #6366f1, #06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>hirrd.</span>
                     </h1>
 
                     <p className="brand-subtitle">
-                        Intelligent HR Platform with Explainable AI
+                        AI-Powered Recruitment & Workspace Ecosystem
                     </p>
 
                     <div className="brand-features">
                         {[
                             'AI-Powered Hiring',
-                            'Wellbeing Insights',
-                            'Human-Centric Decisions',
-                            'Privacy First'
+                            'Intelligent Talent Matching',
+                            'Real-Time Performance Evaluation',
+                            'Continuous Skill Development'
                         ].map((feature, index) => (
                             <motion.div
                                 key={feature}
@@ -125,7 +157,7 @@ const Login = () => {
                     </div>
                 </motion.div>
 
-                {/* Right Side - Login Form */}
+                {/* Right Side - Login/Register Form */}
                 <motion.div
                     className="login-form-container"
                     initial={{ opacity: 0, x: 50 }}
@@ -133,20 +165,23 @@ const Login = () => {
                     transition={{ duration: 0.6, delay: 0.2 }}
                 >
                     <div className="glass-card login-card" style={{ background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(20px)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.2)' }}>
-                        <h2>Welcome Back</h2>
-                        <p className="login-subtitle">Sign in to continue to your dashboard</p>
+                        <h2>{isNewUser ? 'Create Account' : 'Welcome Back'}</h2>
+                        <p className="login-subtitle">
+                            {isNewUser ? 'Fill in your details to get started' : 'Select your role and sign in — or create a new account'}
+                        </p>
 
                         {/* Role Selection */}
                         <div className="role-selection">
-                            <label className="input-label">Select Your Role</label>
+                            <label className="input-label">I am a...</label>
                             <div className="role-grid">
                                 {roles.map((role) => {
                                     const Icon = role.icon
                                     return (
                                         <motion.button
                                             key={role.id}
+                                            type="button"
                                             className={`role-card ${selectedRole === role.id ? 'selected' : ''}`}
-                                            onClick={() => setSelectedRole(role.id)}
+                                            onClick={() => { setSelectedRole(role.id); setError(null) }}
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
                                             style={{
@@ -164,8 +199,24 @@ const Login = () => {
                             </div>
                         </div>
 
-                        {/* Login Form */}
-                        <form onSubmit={handleLogin} className="login-form">
+                        {/* Form */}
+                        <form onSubmit={handleSubmit} className="login-form">
+                            {/* Full Name — only shown for new users */}
+                            {isNewUser && (
+                                <motion.div className="form-group" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.3 }}>
+                                    <label className="input-label">Full Name</label>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        placeholder="John Doe"
+                                        value={fullName}
+                                        onChange={(e) => setFullName(e.target.value)}
+                                        required={isNewUser}
+                                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc' }}
+                                    />
+                                </motion.div>
+                            )}
+
                             <div className="form-group">
                                 <label className="input-label">Email Address</label>
                                 <input
@@ -193,7 +244,12 @@ const Login = () => {
                             </div>
 
                             {error && (
-                                <div style={{ color: 'red', fontSize: '12px', marginTop: '5px' }}>{error}</div>
+                                <div style={{
+                                    color: isNewUser && error.includes('Fill in') ? '#f59e0b' : '#ef4444',
+                                    background: isNewUser && error.includes('Fill in') ? '#fef3c7' : '#fee2e2',
+                                    padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem',
+                                    fontWeight: 500, marginTop: '5px'
+                                }}>{error}</div>
                             )}
 
                             <motion.button
@@ -208,10 +264,10 @@ const Login = () => {
                                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                                 }}
                             >
-                                {loading ? 'Signing In...' : (
+                                {loading ? (isNewUser ? 'Creating Account...' : 'Signing In...') : (
                                     <>
                                         <LogIn size={20} />
-                                        Sign In
+                                        {isNewUser ? 'Create Account & Sign In' : 'Sign In'}
                                     </>
                                 )}
                             </motion.button>
@@ -222,11 +278,15 @@ const Login = () => {
                             )}
                         </form>
 
-                        {/* Quick Links */}
+                        {/* Toggle between modes */}
                         <div className="login-footer">
-                            <Link to="/register" className="link font-bold text-primary hover:text-purple-700">
-                                Create Account
-                            </Link>
+                            <span
+                                className="link font-bold text-primary"
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => { setIsNewUser(!isNewUser); setError(null) }}
+                            >
+                                {isNewUser ? '← Back to Sign In' : 'New here? Create Account'}
+                            </span>
                             <span className="separator">•</span>
                             <a href="#" className="link">
                                 Trust & Privacy
